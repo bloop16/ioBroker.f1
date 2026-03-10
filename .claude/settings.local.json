@@ -11,7 +11,8 @@
       "Bash(curl -s https://raw.githubusercontent.com/Skeletor-ai/iobroker-rag/master/SKILL.md)",
       "Bash(curl -s https://raw.githubusercontent.com/Skeletor-ai/iobroker-rag/master/server.py)",
       "Bash(systemctl --user status iobroker-rag)",
-      "Bash(curl -s http://localhost:8321/health)"
+      "Bash(curl -s http://localhost:8321/health)",
+      "Bash(bash install.sh)"
     ]
   }
 }

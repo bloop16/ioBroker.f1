@@ -61,6 +61,38 @@ interface RaceControlMessage {
 	flag: string;
 }
 
+interface Position {
+	driver_number: number;
+	position: number;
+	date: string;
+}
+
+interface Lap {
+	driver_number: number;
+	lap_number: number;
+	lap_duration: number;
+	is_pit_out_lap: boolean;
+	sector_1_duration: number;
+	sector_2_duration: number;
+	sector_3_duration: number;
+	i1_speed: number;
+	i2_speed: number;
+	st_speed: number;
+}
+
+interface Interval {
+	driver_number: number;
+	gap_to_leader: number;
+	interval: number;
+}
+
+interface PitStop {
+	driver_number: number;
+	lap_number: number;
+	pit_duration: number;
+	date: string;
+}
+
 class F1 extends utils.Adapter {
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
@@ -280,6 +312,84 @@ class F1 extends utils.Adapter {
 				native: {}
 			});
 		}
+
+		await this.setObjectNotExistsAsync('positions', {
+			type: 'channel',
+			common: { name: 'Driver Positions' },
+			native: {}
+		});
+
+		const positionStates = [
+			{ id: 'current', name: 'Current Positions', type: 'string', role: 'json' },
+			{ id: 'intervals', name: 'Intervals', type: 'string', role: 'json' },
+			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+		];
+
+		for (const state of positionStates) {
+			await this.setObjectNotExistsAsync('positions.' + state.id, {
+				type: 'state',
+				common: {
+					name: state.name,
+					type: 'string',
+					role: state.role,
+					read: true,
+					write: false
+				},
+				native: {}
+			});
+		}
+
+		await this.setObjectNotExistsAsync('laps', {
+			type: 'channel',
+			common: { name: 'Lap Timing Data' },
+			native: {}
+		});
+
+		const lapStates = [
+			{ id: 'current', name: 'Current Lap Times', type: 'string', role: 'json' },
+			{ id: 'fastest', name: 'Fastest Laps', type: 'string', role: 'json' },
+			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+		];
+
+		for (const state of lapStates) {
+			await this.setObjectNotExistsAsync('laps.' + state.id, {
+				type: 'state',
+				common: {
+					name: state.name,
+					type: 'string',
+					role: state.role,
+					read: true,
+					write: false
+				},
+				native: {}
+			});
+		}
+
+		await this.setObjectNotExistsAsync('pit_stops', {
+			type: 'channel',
+			common: { name: 'Pit Stop Data' },
+			native: {}
+		});
+
+		const pitStates = [
+			{ id: 'latest', name: 'Latest Pit Stops', type: 'string', role: 'json' },
+			{ id: 'all', name: 'All Pit Stops', type: 'string', role: 'json' },
+			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+		];
+
+		for (const state of pitStates) {
+			await this.setObjectNotExistsAsync('pit_stops.' + state.id, {
+				type: 'state',
+				common: {
+					name: state.name,
+					type: 'string',
+					role: state.role,
+					read: true,
+					write: false
+				},
+				native: {}
+			});
+		}
 	}
 
 	private async fetchData(): Promise<void> {
@@ -296,6 +406,9 @@ class F1 extends utils.Adapter {
 			if (this.currentSessionKey) {
 				await this.updateLiveSession();
 				await this.updateRaceControl();
+				await this.updatePositions();
+				await this.updateLaps();
+				await this.updatePitStops();
 			} else {
 				await this.setStateAsync('live_session.status', { val: 'no_session', ack: true });
 			}
@@ -461,6 +574,129 @@ class F1 extends utils.Adapter {
 			}
 		} catch (error) {
 			this.log.debug('Failed to update race control');
+		}
+	}
+
+	private async updatePositions(): Promise<void> {
+		if (!this.currentSessionKey) return;
+
+		try {
+			const posResponse = await this.api.get<Position[]>('/position', {
+				params: { 
+					session_key: this.currentSessionKey
+				}
+			});
+
+			if (posResponse.data && posResponse.data.length > 0) {
+				const latestPositions = posResponse.data
+					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+					.slice(0, 20)
+					.sort((a, b) => a.position - b.position);
+
+				await this.setStateAsync('positions.current', { 
+					val: JSON.stringify(latestPositions, null, 2), 
+					ack: true 
+				});
+				await this.setStateAsync('positions.last_update', { 
+					val: new Date().toISOString(), 
+					ack: true 
+				});
+			}
+
+			const intResponse = await this.api.get<Interval[]>('/intervals', {
+				params: { 
+					session_key: this.currentSessionKey
+				}
+			});
+
+			if (intResponse.data && intResponse.data.length > 0) {
+				await this.setStateAsync('positions.intervals', { 
+					val: JSON.stringify(intResponse.data, null, 2), 
+					ack: true 
+				});
+			}
+
+			this.log.debug('Updated positions');
+		} catch (error) {
+			this.log.debug('Failed to update positions');
+		}
+	}
+
+	private async updateLaps(): Promise<void> {
+		if (!this.currentSessionKey) return;
+
+		try {
+			const response = await this.api.get<Lap[]>('/laps', {
+				params: { 
+					session_key: this.currentSessionKey
+				}
+			});
+
+			if (response.data && response.data.length > 0) {
+				const currentLaps = response.data
+					.filter(lap => lap.lap_duration > 0)
+					.sort((a, b) => b.lap_number - a.lap_number)
+					.slice(0, 20);
+
+				const fastestLaps = response.data
+					.filter(lap => lap.lap_duration > 0 && !lap.is_pit_out_lap)
+					.sort((a, b) => a.lap_duration - b.lap_duration)
+					.slice(0, 10);
+
+				await this.setStateAsync('laps.current', { 
+					val: JSON.stringify(currentLaps, null, 2), 
+					ack: true 
+				});
+				await this.setStateAsync('laps.fastest', { 
+					val: JSON.stringify(fastestLaps, null, 2), 
+					ack: true 
+				});
+				await this.setStateAsync('laps.last_update', { 
+					val: new Date().toISOString(), 
+					ack: true 
+				});
+
+				this.log.debug('Updated lap times');
+			}
+		} catch (error) {
+			this.log.debug('Failed to update lap times');
+		}
+	}
+
+	private async updatePitStops(): Promise<void> {
+		if (!this.currentSessionKey) return;
+
+		try {
+			const response = await this.api.get<PitStop[]>('/pit', {
+				params: { 
+					session_key: this.currentSessionKey
+				}
+			});
+
+			if (response.data && response.data.length > 0) {
+				const allPits = response.data.sort((a, b) => 
+					new Date(b.date).getTime() - new Date(a.date).getTime()
+				);
+
+				const latestPits = allPits.slice(0, 5);
+
+				await this.setStateAsync('pit_stops.latest', { 
+					val: JSON.stringify(latestPits, null, 2), 
+					ack: true 
+				});
+				await this.setStateAsync('pit_stops.all', { 
+					val: JSON.stringify(allPits, null, 2), 
+					ack: true 
+				});
+				await this.setStateAsync('pit_stops.last_update', { 
+					val: new Date().toISOString(), 
+					ack: true 
+				});
+
+				this.log.debug('Updated pit stops');
+			}
+		} catch (error) {
+			this.log.debug('Failed to update pit stops');
 		}
 	}
 
