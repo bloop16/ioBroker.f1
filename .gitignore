@@ -9,3 +9,4 @@ build/
 .npm
 package-lock.json
 coverage/
+.dev-server/
