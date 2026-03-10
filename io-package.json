@@ -1,0 +1,88 @@
+{
+  "common": {
+    "name": "f1",
+    "version": "0.1.0",
+    "news": {
+      "0.1.0": {
+        "en": "Initial MVP release with calendar and standings",
+        "de": "Initiales MVP-Release mit Kalender und Wertungen"
+      }
+    },
+    "title": "Formula 1",
+    "titleLang": {
+      "en": "Formula 1",
+      "de": "Formel 1"
+    },
+    "desc": {
+      "en": "Formula 1 live data integration - race information, standings, and live session tracking",
+      "de": "Formel-1-Live-Daten-Integration - Renninformationen, Wertungen und Live-Session-Tracking"
+    },
+    "authors": [
+      "Martin (bloop) <git@bloopnet.de>"
+    ],
+    "keywords": [
+      "Formula 1",
+      "F1",
+      "racing",
+      "motorsport",
+      "live data",
+      "standings"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "build/main.js",
+    "icon": "f1.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/bloop16/ioBroker.f1/main/admin/f1.png",
+    "readme": "https://github.com/bloop16/ioBroker.f1/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "misc-data",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.19"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.0.0"
+      }
+    ]
+  },
+  "native": {
+    "updateInterval": 60,
+    "favoriteDriver": "",
+    "favoriteTeam": "",
+    "highlightColor": "#3bb273"
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
+}

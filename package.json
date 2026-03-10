@@ -1,0 +1,65 @@
+{
+  "name": "iobroker.f1",
+  "version": "0.1.0",
+  "description": "Formula 1 live data integration for ioBroker - race information, standings, and live session tracking",
+  "author": {
+    "name": "Martin (bloop)",
+    "email": "git@bloopnet.de"
+  },
+  "contributors": [],
+  "homepage": "https://github.com/bloop16/ioBroker.f1",
+  "license": "MIT",
+  "keywords": [
+    "ioBroker",
+    "Formula 1",
+    "F1",
+    "racing",
+    "motorsport",
+    "live data",
+    "standings",
+    "calendar"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bloop16/ioBroker.f1.git"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.3.2",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@alcalzone/release-script": "^5.0.0",
+    "@alcalzone/release-script-plugin-iobroker": "^4.0.0",
+    "@iobroker/adapter-dev": "^1.5.0",
+    "@iobroker/testing": "^5.0.0",
+    "@tsconfig/node20": "^20.1.9",
+    "@types/axios": "^0.9.36",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "typescript": "~5.7.2"
+  },
+  "main": "build/main.js",
+  "files": [
+    "admin/",
+    "build/",
+    "io-package.json",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "clean": "rimraf build",
+    "lint": "eslint --ext .ts src/",
+    "test": "echo \"No tests yet\"",
+    "release": "release-script"
+  }
+}

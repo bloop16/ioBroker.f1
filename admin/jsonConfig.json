@@ -1,0 +1,49 @@
+{
+  "i18n": true,
+  "type": "panel",
+  "items": {
+    "_header": {
+      "type": "header",
+      "text": "Formula 1 Adapter Settings",
+      "size": 3
+    },
+    "_info": {
+      "type": "staticText",
+      "text": "Configure how often the adapter should fetch new Formula 1 data from the OpenF1 API.",
+      "style": {
+        "marginBottom": 20
+      }
+    },
+    "updateInterval": {
+      "type": "number",
+      "label": "Update Interval (seconds)",
+      "min": 30,
+      "max": 3600,
+      "default": 60,
+      "help": "How often to fetch new data from the API (minimum 30 seconds)"
+    },
+    "_favoritesHeader": {
+      "type": "header",
+      "text": "Favorites (for future highlighting)",
+      "size": 4
+    },
+    "favoriteDriver": {
+      "type": "text",
+      "label": "Favorite Driver",
+      "placeholder": "e.g., Max Verstappen",
+      "help": "Your favorite driver (will be highlighted in future widgets)"
+    },
+    "favoriteTeam": {
+      "type": "text",
+      "label": "Favorite Team",
+      "placeholder": "e.g., Red Bull Racing",
+      "help": "Your favorite team (will be highlighted in future widgets)"
+    },
+    "highlightColor": {
+      "type": "color",
+      "label": "Highlight Color",
+      "default": "#3bb273",
+      "help": "Color for highlighting favorites (hex code)"
+    }
+  }
+}
