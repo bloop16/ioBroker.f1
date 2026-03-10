@@ -11,3 +11,9 @@ package-lock.json
 coverage/
 .dev-server/
 node_modules/
+
+# Package archives
+*.tgz
+
+# Claude AI settings (workspace-specific)
+.claude/
