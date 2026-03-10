@@ -4,6 +4,7 @@ import axios from "axios";
 interface NextRace {
 	session_key: number;
 	session_name: string;
+	session_type: string;
 	date_start: string;
 	date_end: string;
 	circuit_short_name: string;
@@ -27,6 +28,15 @@ interface Session {
 	session_type: string;
 	date_start: string;
 	date_end: string;
+}
+
+interface WeekendSessions {
+	circuit: string;
+	country: string;
+	location: string;
+	year: number;
+	sessions: NextRace[];
+	next_session_index: number;
 }
 
 interface Weather {
@@ -531,6 +541,17 @@ class F1 extends utils.Adapter {
 			const nextRace = await this.getNextRace();
 			if (nextRace) {
 				await this.updateNextRaceStates(nextRace);
+
+				// Fetch next session (any type) and weekend sessions
+				const nextSession = await this.getNextSession();
+				if (nextSession) {
+					await this.updateNextSession(nextSession);
+				}
+
+				const weekendSessions: WeekendSessions | null = await this.getWeekendSessions();
+				if (weekendSessions) {
+					await this.updateWeekendSessions(weekendSessions);
+				}
 			}
 
 			await this.updateStandings();
@@ -997,6 +1018,151 @@ class F1 extends utils.Adapter {
 		}
 	}
 
+	/**
+	 * Get next session (any type: Practice, Qualifying, Sprint, Race)
+	 */
+	private async getNextSession(): Promise<NextRace | null> {
+		try {
+			const now = new Date();
+			const year = now.getFullYear();
+
+			const response = await this.api.get<NextRace[]>("/sessions", {
+				params: { year: year },
+			});
+
+			if (response.data && response.data.length > 0) {
+				const futureSessions = response.data.filter((session: NextRace) => new Date(session.date_start) > now);
+
+				if (futureSessions.length > 0) {
+					return futureSessions.sort(
+						(a: NextRace, b: NextRace) =>
+							new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
+					)[0];
+				}
+			}
+			return null;
+		} catch {
+			this.log.error("Failed to fetch next session");
+			return null;
+		}
+	}
+
+	/**
+	 * Get all sessions for the next race weekend
+	 */
+	private async getWeekendSessions(): Promise<WeekendSessions | null> {
+		try {
+			const now = new Date();
+			const year = now.getFullYear();
+
+			// Get all sessions for the year
+			const response = await this.api.get<NextRace[]>("/sessions", {
+				params: { year: year },
+			});
+
+			if (!response.data || response.data.length === 0) {
+				return null;
+			}
+
+			// Filter future sessions
+			const futureSessions = response.data.filter((session: NextRace) => new Date(session.date_start) > now);
+
+			if (futureSessions.length === 0) {
+				return null;
+			}
+
+			// Sort by date
+			futureSessions.sort(
+				(a: NextRace, b: NextRace) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
+			);
+
+			// Group by circuit (sessions within 7 days = same weekend)
+			const firstSession = futureSessions[0];
+			const firstSessionDate = new Date(firstSession.date_start);
+			const weekendEnd = new Date(firstSessionDate);
+			weekendEnd.setDate(weekendEnd.getDate() + 7);
+
+			const weekendSessionsList = futureSessions.filter((session: NextRace) => {
+				const sessionDate = new Date(session.date_start);
+				return (
+					session.circuit_short_name === firstSession.circuit_short_name &&
+					sessionDate >= firstSessionDate &&
+					sessionDate <= weekendEnd
+				);
+			});
+
+			// Find next session index
+			const nextSessionIndex = 0; // First session is always next
+
+			return {
+				circuit: firstSession.circuit_short_name,
+				country: firstSession.country_name,
+				location: firstSession.location,
+				year: firstSession.year,
+				sessions: weekendSessionsList,
+				next_session_index: nextSessionIndex,
+			};
+		} catch {
+			this.log.error("Failed to fetch weekend sessions");
+			return null;
+		}
+	}
+
+	/**
+	 * Update next_session states
+	 *
+	 * @param session
+	 */
+	private async updateNextSession(session: NextRace | null): Promise<void> {
+		if (session) {
+			await this.setStateAsync("next_session.session_name", {
+				val: session.session_name,
+				ack: true,
+			});
+			await this.setStateAsync("next_session.session_type", {
+				val: session.session_type,
+				ack: true,
+			});
+			await this.setStateAsync("next_session.circuit", { val: session.circuit_short_name, ack: true });
+			await this.setStateAsync("next_session.country", { val: session.country_name, ack: true });
+			await this.setStateAsync("next_session.location", { val: session.location, ack: true });
+			await this.setStateAsync("next_session.date_start", { val: session.date_start, ack: true });
+
+			const daysUntil = Math.floor((new Date(session.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+			await this.setStateAsync("next_session.countdown_days", { val: daysUntil, ack: true });
+
+			await this.setStateAsync("next_session.json", { val: JSON.stringify(session), ack: true });
+		} else {
+			await this.setStateAsync("next_session.session_name", { val: "No upcoming session", ack: true });
+		}
+	}
+
+	/**
+	 * Update weekend_sessions states
+	 *
+	 * @param weekend
+	 */
+	private async updateWeekendSessions(weekend: WeekendSessions | null): Promise<void> {
+		if (weekend) {
+			await this.setStateAsync("weekend_sessions.circuit", { val: weekend.circuit, ack: true });
+			await this.setStateAsync("weekend_sessions.country", { val: weekend.country, ack: true });
+			await this.setStateAsync("weekend_sessions.location", { val: weekend.location, ack: true });
+			await this.setStateAsync("weekend_sessions.sessions_count", {
+				val: weekend.sessions.length,
+				ack: true,
+			});
+			await this.setStateAsync("weekend_sessions.next_session_index", {
+				val: weekend.next_session_index,
+				ack: true,
+			});
+			await this.setStateAsync("weekend_sessions.sessions_json", {
+				val: JSON.stringify(weekend.sessions),
+				ack: true,
+			});
+		} else {
+			await this.setStateAsync("weekend_sessions.sessions_count", { val: 0, ack: true });
+		}
+	}
 	private onUnload(callback: () => void): void {
 		try {
 			if (this.updateInterval) {
