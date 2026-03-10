@@ -1,16 +1,32 @@
+# Dependencies
 node_modules/
+
+# Build output
 build/
+
+# IDEs
 .vscode/
 .idea/
+
+# Logs
 *.log
+
+# OS files
 .DS_Store
 *.swp
+
+# Environment
 .env
 .npm
-package-lock.json
+
+# Testing
 coverage/
+
+# ioBroker dev-server
 .dev-server/
-node_modules/
+
+# Package lock (auto-generated)
+package-lock.json
 
 # Package archives
 *.tgz
