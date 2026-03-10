@@ -10,3 +10,4 @@ build/
 package-lock.json
 coverage/
 .dev-server/
+node_modules/
