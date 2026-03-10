@@ -61,8 +61,6 @@
     "clean": "rimraf build",
     "lint": "eslint --ext .ts src/",
     "test": "echo \"No tests yet\"",
-    "release": "release-script",
-    "test:local": "npm run build && node test-local.js",
-    "test:api": "node test-api-v2.js"
+    "release": "release-script"
   }
 }
