@@ -94,3 +94,25 @@ F1, FORMULA ONE, FORMULA 1, FIA FORMULA ONE WORLD CHAMPIONSHIP, GRAND PRIX and r
 - Next race information
 - OpenF1 API integration
 - Auto-update functionality
+
+## Development & Testing
+
+### Local Testing (without ioBroker installation)
+
+
+
+### Test Scripts
+
+- **test-local.js** - Mock adapter with real API calls
+- **test-api-v2.js** - Direct API testing
+
+### Example Output
+
+```
+🏎️  F1 Adapter Local Test
+Circuit: Shanghai
+Country: China
+Date: 2026-03-15T07:00:00+00:00
+Days until race: 5
+✅ TEST SUCCESSFUL!
+```
