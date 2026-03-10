@@ -18,23 +18,6 @@ Formula 1 live data integration for ioBroker using the [OpenF1 API](https://open
 - **Telemetry** - Speed, throttle, brake, gear, RPM, DRS
 - **Track Position** - Real-time car positions (X/Y/Z coordinates)
 
-## Installation
-
-### Via ioBroker Admin (when published)
-Search for "f1" in the adapter list and install.
-
-### Via npm
-```bash
-cd /opt/iobroker
-npm install iobroker.f1
-```
-
-### From GitHub
-```bash
-cd /opt/iobroker
-npm install https://github.com/bloop16/ioBroker.f1/tarball/main
-```
-
 ## Configuration
 
 Configure the adapter in the ioBroker Admin interface:
