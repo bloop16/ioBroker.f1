@@ -65,12 +65,13 @@ class F1 extends utils.Adapter {
         this.log.info(`F1 adapter initialized. Update interval: ${this.config.updateInterval}s`);
     }
     async initializeStates() {
+        // Next Race Channel
         await this.setObjectNotExistsAsync('next_race', {
             type: 'channel',
             common: { name: 'Next Race Information' },
             native: {}
         });
-        const states = [
+        const raceStates = [
             { id: 'circuit', name: 'Circuit Name', type: 'string', role: 'text' },
             { id: 'country', name: 'Country', type: 'string', role: 'text' },
             { id: 'location', name: 'Location', type: 'string', role: 'text' },
@@ -78,7 +79,7 @@ class F1 extends utils.Adapter {
             { id: 'countdown_days', name: 'Days until race', type: 'number', role: 'value', unit: 'days' },
             { id: 'json', name: 'Next Race (JSON)', type: 'string', role: 'json' }
         ];
-        for (const state of states) {
+        for (const state of raceStates) {
             await this.setObjectNotExistsAsync(`next_race.${state.id}`, {
                 type: 'state',
                 common: {
@@ -92,19 +93,42 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Standings Channel
+        await this.setObjectNotExistsAsync('standings', {
+            type: 'channel',
+            common: { name: 'Championship Standings' },
+            native: {}
+        });
+        const standingsStates = [
+            { id: 'drivers', name: 'Driver Standings', type: 'string', role: 'json' },
+            { id: 'teams', name: 'Team Standings', type: 'string', role: 'json' },
+            { id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+        ];
+        for (const state of standingsStates) {
+            await this.setObjectNotExistsAsync(`standings.${state.id}`, {
+                type: 'state',
+                common: {
+                    name: state.name,
+                    type: state.type,
+                    role: state.role,
+                    read: true,
+                    write: false
+                },
+                native: {}
+            });
+        }
     }
     async fetchData() {
         try {
             this.log.debug('Fetching data from OpenF1 API...');
+            // Fetch next race
             const nextRace = await this.getNextRace();
             if (nextRace) {
                 await this.updateNextRaceStates(nextRace);
-                await this.setStateAsync('info.connection', { val: true, ack: true });
-                this.log.debug(`Next race: ${nextRace.circuit_short_name} - ${nextRace.date_start}`);
             }
-            else {
-                this.log.warn('No upcoming race found');
-            }
+            // Fetch standings
+            await this.updateStandings();
+            await this.setStateAsync('info.connection', { val: true, ack: true });
         }
         catch (error) {
             this.log.error(`Failed to fetch data: ${error}`);
@@ -115,15 +139,12 @@ class F1 extends utils.Adapter {
         try {
             const now = new Date();
             const year = now.getFullYear();
-            // Get all races for current year
             const response = await this.api.get('/sessions', {
                 params: { session_name: 'Race', year: year }
             });
             if (response.data && response.data.length > 0) {
-                // Filter future races client-side
                 const futureRaces = response.data.filter((race) => new Date(race.date_start) > now);
                 if (futureRaces.length > 0) {
-                    // Sort by date and get first
                     return futureRaces.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())[0];
                 }
             }
@@ -142,6 +163,43 @@ class F1 extends utils.Adapter {
         const daysUntil = Math.ceil((new Date(race.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         await this.setStateAsync('next_race.countdown_days', { val: daysUntil, ack: true });
         await this.setStateAsync('next_race.json', { val: JSON.stringify(race, null, 2), ack: true });
+        this.log.debug(`Next race: ${race.circuit_short_name} - ${race.date_start}`);
+    }
+    async updateStandings() {
+        try {
+            // Get drivers from latest session
+            const response = await this.api.get('/drivers', {
+                params: { session_key: 'latest' }
+            });
+            if (response.data && response.data.length > 0) {
+                // Sort by team and driver number
+                const drivers = response.data.sort((a, b) => {
+                    if (a.team_name === b.team_name) {
+                        return a.driver_number - b.driver_number;
+                    }
+                    return a.team_name.localeCompare(b.team_name);
+                });
+                // Extract unique teams
+                const teams = Array.from(new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }]))
+                    .values());
+                await this.setStateAsync('standings.drivers', {
+                    val: JSON.stringify(drivers, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('standings.teams', {
+                    val: JSON.stringify(teams, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('standings.last_update', {
+                    val: new Date().toISOString(),
+                    ack: true
+                });
+                this.log.debug(`Updated standings: ${drivers.length} drivers, ${teams.length} teams`);
+            }
+        }
+        catch (error) {
+            this.log.error(`Failed to update standings: ${error}`);
+        }
     }
     onUnload(callback) {
         try {
