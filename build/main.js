@@ -113,12 +113,19 @@ class F1 extends utils.Adapter {
     }
     async getNextRace() {
         try {
-            const now = new Date().toISOString();
+            const now = new Date();
+            const year = now.getFullYear();
+            // Get all races for current year
             const response = await this.api.get('/sessions', {
-                params: { session_name: 'Race', date_start_gte: now, year: new Date().getFullYear() }
+                params: { session_name: 'Race', year: year }
             });
             if (response.data && response.data.length > 0) {
-                return response.data.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())[0];
+                // Filter future races client-side
+                const futureRaces = response.data.filter((race) => new Date(race.date_start) > now);
+                if (futureRaces.length > 0) {
+                    // Sort by date and get first
+                    return futureRaces.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())[0];
+                }
             }
             return null;
         }
