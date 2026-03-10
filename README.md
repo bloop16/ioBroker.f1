@@ -4,165 +4,79 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.f1.svg)](https://www.npmjs.com/package/iobroker.f1)
 [![License](https://img.shields.io/github/license/bloop16/ioBroker.f1.svg)](https://github.com/bloop16/ioBroker.f1/blob/main/LICENSE)
 
-## Formula 1 Live Data Integration for ioBroker
+Formula 1 live data integration for ioBroker using the [OpenF1 API](https://openf1.org/).
 
-Brings Formula 1 race information, live session data, and championship standings into your ioBroker installation.
+## Features
 
-### Features (MVP - Phase 1)
+- **Race Calendar** - Next race information with countdown
+- **Championship Standings** - Driver and team standings
+- **Live Session Data** - Track status, weather, race control messages
+- **Live Timing** - Positions, lap times, sector times, intervals
+- **Pit Stops** - Pit stop data and statistics
+- **Tyre Strategy** - Tyre compounds and stint information
+- **Team Radio** - Radio messages with audio recordings
+- **Telemetry** - Speed, throttle, brake, gear, RPM, DRS
+- **Track Position** - Real-time car positions (X/Y/Z coordinates)
 
-- ✅ **Next Race Information**
-  - Circuit name and location
-  - Race date and countdown
-  - Country information
-  
-- ✅ **Auto-Update**
-  - Configurable update interval
-  - Connection status monitoring
+## Installation
 
-### Planned Features
+### Via ioBroker Admin (when published)
+Search for "f1" in the adapter list and install.
 
-- **Phase 2:** Live Session Tracking
-  - Track status (green/yellow/red/SC)
-  - Weather conditions
-  - Race Control messages
-  
-- **Phase 3:** Advanced Timing
-  - Lap times and sectors
-  - Tyre strategy
-  - Pit stop information
-  
-- **Phase 4:** VIS Widgets
-  - Custom widgets for VIS1 and VIS2
-  - Interactive dashboards
-
-### Data Source
-
-This adapter uses the [OpenF1 API](https://openf1.org/) for all Formula 1 data.
-
-### Installation
-
-#### Via npm (when published)
+### Via npm
 ```bash
+cd /opt/iobroker
 npm install iobroker.f1
 ```
 
-#### From GitHub (development)
+### From GitHub
 ```bash
 cd /opt/iobroker
-npm install bloop16/ioBroker.f1
+npm install https://github.com/bloop16/ioBroker.f1/tarball/main
 ```
 
-### Configuration
+## Configuration
 
-- **Update Interval:** How often to fetch new data (in seconds, default: 60)
-- **Favorite Driver:** Your favorite driver (for future highlighting)
-- **Favorite Team:** Your favorite team (for future highlighting)
-- **Highlight Color:** Color for highlighting favorites (hex code)
+Configure the adapter in the ioBroker Admin interface:
 
-### States
+- **Update Interval** - Normal polling interval in seconds (default: 3600)
+- **Race Interval** - Fast polling during live sessions in seconds (default: 10)
+- **Dynamic Polling** - Automatically switch to fast polling during sessions (default: enabled)
 
-#### next_race.*
-- `next_race.circuit` - Circuit name (e.g., "Melbourne")
-- `next_race.country` - Country name (e.g., "Australia")
-- `next_race.location` - Location (e.g., "Melbourne")
-- `next_race.date_start` - Race start date/time (ISO 8601)
-- `next_race.countdown_days` - Days until race
-- `next_race.json` - Full race information as JSON
-
-### Requirements
+## Requirements
 
 - ioBroker >= 5.0.19
 - Node.js >= 20
 - Internet connection
 
-### License
+## License
 
 MIT License
 
 Copyright (c) 2026 Martin (bloop) <git@bloopnet.de>
 
-### Disclaimer
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-This project is not affiliated with, endorsed by, or in any way officially connected with Formula 1, the FIA, or any of their subsidiaries or affiliates.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-F1, FORMULA ONE, FORMULA 1, FIA FORMULA ONE WORLD CHAMPIONSHIP, GRAND PRIX and related marks are trade marks of Formula One Licensing B.V.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-### Changelog
+## Disclaimer
 
-#### 0.1.0 (2026-03-10)
-- Initial MVP release
-- Next race information
-- OpenF1 API integration
-- Auto-update functionality
+This project is **not affiliated** with, endorsed by, or in any way officially connected with Formula 1, the FIA, or any of their subsidiaries or affiliates.
 
-## Development & Testing
+**F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
 
-### Local Testing (without ioBroker installation)
-
-
-
-### Test Scripts
-
-- **test-local.js** - Mock adapter with real API calls
-- **test-api-v2.js** - Direct API testing
-
-### Example Output
-
-```
-🏎️  F1 Adapter Local Test
-Circuit: Shanghai
-Country: China
-Date: 2026-03-15T07:00:00+00:00
-Days until race: 5
-✅ TEST SUCCESSFUL!
-```
-
----
-
-## ⚖️ Legal Disclaimer
-
-This adapter is an **unofficial, community-operated project** for educational and non-commercial use.
-
-### Not Affiliated With
-
-This project is **NOT** associated, affiliated, endorsed, or sponsored by:
-- Formula One World Championship Limited
-- Formula One Management
-- Formula One Licensing B.V.
-- FIA (Fédération Internationale de l'Automobile)
-
-### Trademarks
-
-The marks **F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
-
-### Data Source
-
-All data is provided by [OpenF1](https://openf1.org/), an **open-source API** aggregating publicly available Formula 1 timing and telemetry data.
-
-OpenF1 is an independent, community-driven project not associated with Formula 1, FIA, or Formula One Management.
-
-### Intended Use
-
-This adapter is intended for:
-- ✅ Personal use
-- ✅ Educational purposes
-- ✅ Non-commercial fan engagement
-- ✅ Research and learning
-
-### Commercial Use
-
-❌ **NOT for commercial use** without appropriate licensing from Formula One Licensing B.V.
-
-For commercial use cases, please contact Formula One Management for licensing information.
-
-### Data Rights
-
-This project does not claim ownership of Formula 1 data, trademarks, broadcasts, or any official Formula 1 content. All data is accessed through public APIs and is subject to the terms and conditions of those services.
-
----
-
-## 📜 License
-
-MIT License - See [LICENSE](LICENSE) file for details.
-
-**Note:** The MIT license applies to the adapter code only, not to Formula 1 data, trademarks, or content.
+This adapter is intended for personal, non-commercial use only. All data is provided by [OpenF1](https://openf1.org/), an independent community-driven API.
