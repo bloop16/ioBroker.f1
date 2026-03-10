@@ -53,7 +53,7 @@ Configure the adapter in the ioBroker Admin interface:
 
 MIT License
 
-Copyright (c) 2026 Martin (bloop) <git@bloopnet.de>
+Copyright (c) 2026 Martin (bloop) <bloop16@hotmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
