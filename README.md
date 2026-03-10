@@ -116,3 +116,53 @@ Date: 2026-03-15T07:00:00+00:00
 Days until race: 5
 ✅ TEST SUCCESSFUL!
 ```
+
+---
+
+## ⚖️ Legal Disclaimer
+
+This adapter is an **unofficial, community-operated project** for educational and non-commercial use.
+
+### Not Affiliated With
+
+This project is **NOT** associated, affiliated, endorsed, or sponsored by:
+- Formula One World Championship Limited
+- Formula One Management
+- Formula One Licensing B.V.
+- FIA (Fédération Internationale de l'Automobile)
+
+### Trademarks
+
+The marks **F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
+
+### Data Source
+
+All data is provided by [OpenF1](https://openf1.org/), an **open-source API** aggregating publicly available Formula 1 timing and telemetry data.
+
+OpenF1 is an independent, community-driven project not associated with Formula 1, FIA, or Formula One Management.
+
+### Intended Use
+
+This adapter is intended for:
+- ✅ Personal use
+- ✅ Educational purposes
+- ✅ Non-commercial fan engagement
+- ✅ Research and learning
+
+### Commercial Use
+
+❌ **NOT for commercial use** without appropriate licensing from Formula One Licensing B.V.
+
+For commercial use cases, please contact Formula One Management for licensing information.
+
+### Data Rights
+
+This project does not claim ownership of Formula 1 data, trademarks, broadcasts, or any official Formula 1 content. All data is accessed through public APIs and is subject to the terms and conditions of those services.
+
+---
+
+## 📜 License
+
+MIT License - See [LICENSE](LICENSE) file for details.
+
+**Note:** The MIT license applies to the adapter code only, not to Formula 1 data, trademarks, or content.

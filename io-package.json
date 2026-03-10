@@ -10,11 +10,11 @@
     },
     "title": "Formula 1",
     "titleLang": {
-      "en": "Formula 1",
+      "en": "F1 Live Data (Unofficial)",
       "de": "Formel 1"
     },
     "desc": {
-      "en": "Formula 1 live data integration - race information, standings, and live session tracking",
+      "en": "Unofficial Formula 1 live data adapter using OpenF1 API. Not affiliated with Formula One.",
       "de": "Formel-1-Live-Daten-Integration - Renninformationen, Wertungen und Live-Session-Tracking"
     },
     "authors": [
@@ -59,7 +59,10 @@
     "updateInterval": 60,
     "favoriteDriver": "",
     "favoriteTeam": "",
-    "highlightColor": "#3bb273"
+    "highlightColor": "#3bb273",
+    "updateIntervalNormal": 3600,
+    "updateIntervalRace": 10,
+    "enableDynamicPolling": true
   },
   "objects": [],
   "instanceObjects": [

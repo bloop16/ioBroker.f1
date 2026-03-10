@@ -41,6 +41,7 @@ const axios_1 = __importDefault(require("axios"));
 class F1 extends utils.Adapter {
     updateInterval;
     api;
+    currentPollingMode = 'normal';
     constructor(options = {}) {
         super({
             ...options,
@@ -60,9 +61,79 @@ class F1 extends utils.Adapter {
         await this.initializeStates();
         await this.setStateAsync('info.connection', { val: false, ack: true });
         await this.fetchData();
-        const interval = (this.config.updateInterval || 60) * 1000;
+        // Start with appropriate interval
+        await this.updatePollingInterval();
+    }
+    async updatePollingInterval() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
+        let interval;
+        if (this.config.enableDynamicPolling) {
+            // Check if there's an active session today
+            const hasActiveSession = await this.checkActiveSession();
+            if (hasActiveSession) {
+                interval = (this.config.updateIntervalRace || 10) * 1000;
+                if (this.currentPollingMode !== 'race') {
+                    this.currentPollingMode = 'race';
+                    this.log.info(`Switching to RACE mode: ${this.config.updateIntervalRace}s interval`);
+                }
+            }
+            else {
+                interval = (this.config.updateIntervalNormal || 3600) * 1000;
+                if (this.currentPollingMode !== 'normal') {
+                    this.currentPollingMode = 'normal';
+                    this.log.info(`Switching to NORMAL mode: ${this.config.updateIntervalNormal}s interval`);
+                }
+            }
+        }
+        else {
+            // Fallback to old setting
+            interval = (this.config.updateInterval || 60) * 1000;
+            this.log.info(`Using legacy update interval: ${this.config.updateInterval}s`);
+        }
         this.updateInterval = setInterval(() => this.fetchData(), interval);
-        this.log.info(`F1 adapter initialized. Update interval: ${this.config.updateInterval}s`);
+        this.log.debug(`Next update in ${interval / 1000}s`);
+    }
+    async checkActiveSession() {
+        try {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+            // Get all sessions for today
+            const response = await this.api.get('/sessions', {
+                params: {
+                    date_start_gte: todayStart.toISOString(),
+                    date_start_lte: todayEnd.toISOString()
+                }
+            });
+            if (!response.data || response.data.length === 0) {
+                return false;
+            }
+            // Check if any session is currently active (within time window)
+            for (const session of response.data) {
+                const sessionStart = new Date(session.date_start);
+                const sessionEnd = new Date(session.date_end);
+                if (now >= sessionStart && now <= sessionEnd) {
+                    this.log.debug(`Active session detected: ${session.session_name} (${session.session_type})`);
+                    return true;
+                }
+            }
+            // Check if any session starts within next 30 minutes (preparation time)
+            for (const session of response.data) {
+                const sessionStart = new Date(session.date_start);
+                const minutesUntilStart = (sessionStart.getTime() - now.getTime()) / (1000 * 60);
+                if (minutesUntilStart > 0 && minutesUntilStart <= 30) {
+                    this.log.debug(`Session starting soon: ${session.session_name} in ${Math.round(minutesUntilStart)} minutes`);
+                    return true;
+                }
+            }
+            return false;
+        }
+        catch (error) {
+            this.log.debug(`Failed to check active session: ${error}`);
+            return false;
+        }
     }
     async initializeStates() {
         // Next Race Channel
@@ -129,6 +200,10 @@ class F1 extends utils.Adapter {
             // Fetch standings
             await this.updateStandings();
             await this.setStateAsync('info.connection', { val: true, ack: true });
+            // Re-check polling interval after each fetch (in case session started/ended)
+            if (this.config.enableDynamicPolling) {
+                await this.updatePollingInterval();
+            }
         }
         catch (error) {
             this.log.error(`Failed to fetch data: ${error}`);
@@ -167,19 +242,16 @@ class F1 extends utils.Adapter {
     }
     async updateStandings() {
         try {
-            // Get drivers from latest session
             const response = await this.api.get('/drivers', {
                 params: { session_key: 'latest' }
             });
             if (response.data && response.data.length > 0) {
-                // Sort by team and driver number
                 const drivers = response.data.sort((a, b) => {
                     if (a.team_name === b.team_name) {
                         return a.driver_number - b.driver_number;
                     }
                     return a.team_name.localeCompare(b.team_name);
                 });
-                // Extract unique teams
                 const teams = Array.from(new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }]))
                     .values());
                 await this.setStateAsync('standings.drivers', {
