@@ -41,28 +41,6 @@
       "default": 10,
       "help": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!"
     },
-    "_deprecatedHeader": {
-      "type": "header",
-      "text": "Legacy Settings (deprecated)",
-      "size": 4
-    },
-    "_deprecatedNote": {
-      "type": "staticText",
-      "text": "The following setting is deprecated. Use dynamic polling instead.",
-      "style": {
-        "marginBottom": 10,
-        "fontStyle": "italic",
-        "color": "#666"
-      }
-    },
-    "updateInterval": {
-      "type": "number",
-      "label": "Update Interval (deprecated)",
-      "min": 30,
-      "max": 3600,
-      "default": 60,
-      "help": "DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled."
-    },
     "_favoritesHeader": {
       "type": "header",
       "text": "Favorites (for future highlighting)",

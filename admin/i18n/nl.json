@@ -1,5 +1,24 @@
 {
-	"template adapter settings": "Adapterinstellingen voor template",
-	"option1": "optie1",
-	"option2": "optie2"
+	"Formula 1 Adapter Settings": "Formule 1 adapter-instellingen",
+	"Configure update intervals and polling behavior for OpenF1 API.": "Configureer update-intervallen en polling-gedrag voor de OpenF1 API.",
+	"Polling Configuration": "Polling-configuratie",
+	"Enable dynamic polling": "Dynamische polling inschakelen",
+	"Automatically switch between fast and slow polling based on race schedule": "Automatisch wisselen tussen snelle en langzame polling op basis van het racekalender",
+	"Update interval (normal)": "Update-interval (normaal)",
+	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Update-interval in seconden zonder actieve racesessie (standaard: 1 uur = 3600 s)",
+	"Update interval (race day)": "Update-interval (racedag)",
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Interval in seconden tijdens actieve racesessies (standaard: 10 s). OpenF1-limiet: 3 req/s, 30 req/min – 10 s is veilig!",
+	"Legacy Settings (deprecated)": "Verouderde instellingen (verouderd)",
+	"The following setting is deprecated. Use dynamic polling instead.": "Deze instelling is verouderd. Gebruik in plaats daarvan dynamische polling.",
+	"Update Interval (deprecated)": "Update-interval (verouderd)",
+	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "VEROUDERD: Gebruik dynamische polling. Deze instelling wordt genegeerd als dynamische polling is ingeschakeld.",
+	"Favorites (for future highlighting)": "Favorieten (voor toekomstige markering)",
+	"Favorite Driver": "Favoriete coureur",
+	"e.g., Max Verstappen": "bijv. Max Verstappen",
+	"Your favorite driver (will be highlighted in future widgets)": "Uw favoriete coureur (wordt gemarkeerd in toekomstige widgets)",
+	"Favorite Team": "Favoriet team",
+	"e.g., Red Bull Racing": "bijv. Red Bull Racing",
+	"Your favorite team (will be highlighted in future widgets)": "Uw favoriete team (wordt gemarkeerd in toekomstige widgets)",
+	"Highlight Color": "Markeringskleur",
+	"Color for highlighting favorites (hex code)": "Kleur voor het markeren van favorieten (hexadecimale code)"
 }

@@ -4,43 +4,95 @@
 "use strict";
 
 systemDictionary = {
-	"template adapter settings": {
-		"en": "Adapter settings for template",
-		"de": "Adaptereinstellungen für template",
-		"ru": "Настройки адаптера для template",
-		"pt": "Configurações do adaptador para template",
-		"nl": "Adapterinstellingen voor template",
-		"fr": "Paramètres d'adaptateur pour template",
-		"it": "Impostazioni dell'adattatore per template",
-		"es": "Ajustes del adaptador para template",
-		"pl": "Ustawienia adaptera dla template",
-		"uk": "Налаштування адаптера для template",
-		"zh-cn": "template的适配器设置"
+	"Formula 1 Adapter Settings": {
+		"en": "Formula 1 Adapter Settings",
+		"de": "Formel 1 Adapter-Einstellungen",
+		"ru": "Настройки адаптера Формула 1",
+		"pt": "Configurações do adaptador Fórmula 1",
+		"nl": "Formule 1 adapter-instellingen",
+		"fr": "Paramètres de l'adaptateur Formule 1",
+		"it": "Impostazioni adattatore Formula 1",
+		"es": "Configuración del adaptador Fórmula 1",
+		"pl": "Ustawienia adaptera Formuła 1",
+		"uk": "Налаштування адаптера Формула 1",
+		"zh-cn": "一级方程式适配器设置"
 	},
-	"option1": {
-		"en": "option1",
-		"de": "Option1",
-		"ru": "вариант 1",
-		"pt": "opção1",
-		"nl": "optie1",
-		"fr": "option1",
-		"it": "opzione1",
-		"es": "opción1",
-		"pl": "opcja 1",
-		"uk": "варіант1",
-		"zh-cn": "选项1"
+	"Enable dynamic polling": {
+		"en": "Enable dynamic polling",
+		"de": "Dynamisches Polling aktivieren",
+		"ru": "Включить динамический опрос",
+		"pt": "Ativar sondagem dinâmica",
+		"nl": "Dynamische polling inschakelen",
+		"fr": "Activer l'interrogation dynamique",
+		"it": "Abilita polling dinamico",
+		"es": "Activar sondeo dinámico",
+		"pl": "Włącz dynamiczne odpytywanie",
+		"uk": "Увімкнути динамічне опитування",
+		"zh-cn": "启用动态轮询"
 	},
-	"option2": {
-		"en": "option2",
-		"de": "Option2",
-		"ru": "вариант 2",
-		"pt": "opção2",
-		"nl": "optie2",
-		"fr": "option2",
-		"it": "opzione2",
-		"es": "opción2",
-		"pl": "opcja 2",
-		"uk": "варіант2",
-		"zh-cn": "选项2"
+	"Update interval (normal)": {
+		"en": "Update interval (normal)",
+		"de": "Aktualisierungsintervall (normal)",
+		"ru": "Интервал обновления (обычный)",
+		"pt": "Intervalo de atualização (normal)",
+		"nl": "Update-interval (normaal)",
+		"fr": "Intervalle de mise à jour (normal)",
+		"it": "Intervallo di aggiornamento (normale)",
+		"es": "Intervalo de actualización (normal)",
+		"pl": "Interwał aktualizacji (normalny)",
+		"uk": "Інтервал оновлення (звичайний)",
+		"zh-cn": "更新间隔（正常）"
+	},
+	"Update interval (race day)": {
+		"en": "Update interval (race day)",
+		"de": "Aktualisierungsintervall (Renntag)",
+		"ru": "Интервал обновления (день гонки)",
+		"pt": "Intervalo de atualização (dia de corrida)",
+		"nl": "Update-interval (racedag)",
+		"fr": "Intervalle de mise à jour (jour de course)",
+		"it": "Intervallo di aggiornamento (giorno di gara)",
+		"es": "Intervalo de actualización (día de carrera)",
+		"pl": "Interwał aktualizacji (dzień wyścigu)",
+		"uk": "Інтервал оновлення (день перегонів)",
+		"zh-cn": "更新间隔（比赛日）"
+	},
+	"Favorite Driver": {
+		"en": "Favorite Driver",
+		"de": "Lieblingsfahrer",
+		"ru": "Любимый гонщик",
+		"pt": "Piloto favorito",
+		"nl": "Favoriete coureur",
+		"fr": "Pilote favori",
+		"it": "Pilota preferito",
+		"es": "Piloto favorito",
+		"pl": "Ulubiony kierowca",
+		"uk": "Улюблений гонщик",
+		"zh-cn": "最喜欢的车手"
+	},
+	"Favorite Team": {
+		"en": "Favorite Team",
+		"de": "Lieblingsteam",
+		"ru": "Любимая команда",
+		"pt": "Equipa favorita",
+		"nl": "Favoriet team",
+		"fr": "Équipe favorite",
+		"it": "Team preferito",
+		"es": "Equipo favorito",
+		"pl": "Ulubiony zespół",
+		"uk": "Улюблена команда",
+		"zh-cn": "最喜欢的车队"
+	},
+	"Highlight Color": {
+		"en": "Highlight Color",
+		"de": "Hervorhebungsfarbe",
+		"ru": "Цвет выделения",
+		"pt": "Cor de destaque",
+		"nl": "Markeringskleur",
+		"fr": "Couleur de mise en évidence",
+		"it": "Colore evidenziazione",
+		"es": "Color de resaltado",
+		"pl": "Kolor wyróżnienia",
+		"uk": "Колір виділення",
+		"zh-cn": "高亮颜色"
 	}
 };

@@ -1,5 +1,24 @@
 {
-	"template adapter settings": "Настройки адаптера для template",
-	"option1": "вариант 1",
-	"option2": "вариант 2"
+	"Formula 1 Adapter Settings": "Настройки адаптера Формула 1",
+	"Configure update intervals and polling behavior for OpenF1 API.": "Настройте интервалы обновления и поведение опроса для API OpenF1.",
+	"Polling Configuration": "Конфигурация опроса",
+	"Enable dynamic polling": "Включить динамический опрос",
+	"Automatically switch between fast and slow polling based on race schedule": "Автоматически переключаться между быстрым и медленным опросом в зависимости от расписания гонок",
+	"Update interval (normal)": "Интервал обновления (обычный)",
+	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Интервал обновления в секундах при отсутствии активной гоночной сессии (по умолчанию: 1 час = 3600 с)",
+	"Update interval (race day)": "Интервал обновления (день гонки)",
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Интервал в секундах во время активных гоночных сессий (по умолчанию: 10 с). Лимит OpenF1: 3 запр./с, 30 запр./мин – 10 с безопасно!",
+	"Legacy Settings (deprecated)": "Устаревшие настройки (deprecated)",
+	"The following setting is deprecated. Use dynamic polling instead.": "Эта настройка устарела. Используйте вместо неё динамический опрос.",
+	"Update Interval (deprecated)": "Интервал обновления (устаревший)",
+	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "УСТАРЕЛО: Используйте динамический опрос. Эта настройка игнорируется при включённом динамическом опросе.",
+	"Favorites (for future highlighting)": "Избранное (для выделения в будущем)",
+	"Favorite Driver": "Любимый гонщик",
+	"e.g., Max Verstappen": "напр., Макс Ферстаппен",
+	"Your favorite driver (will be highlighted in future widgets)": "Ваш любимый гонщик (будет выделен в будущих виджетах)",
+	"Favorite Team": "Любимая команда",
+	"e.g., Red Bull Racing": "напр., Red Bull Racing",
+	"Your favorite team (will be highlighted in future widgets)": "Ваша любимая команда (будет выделена в будущих виджетах)",
+	"Highlight Color": "Цвет выделения",
+	"Color for highlighting favorites (hex code)": "Цвет для выделения избранного (шестнадцатеричный код)"
 }

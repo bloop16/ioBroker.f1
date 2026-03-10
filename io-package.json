@@ -56,7 +56,6 @@
     ]
   },
   "native": {
-    "updateInterval": 60,
     "favoriteDriver": "",
     "favoriteTeam": "",
     "highlightColor": "#3bb273",

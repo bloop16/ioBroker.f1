@@ -1,19 +1,5 @@
-import * as utils from '@iobroker/adapter-core';
-import axios from 'axios';
-
-declare global {
-	namespace ioBroker {
-		interface AdapterConfig {
-			updateInterval: number;
-			updateIntervalNormal: number;
-			updateIntervalRace: number;
-			enableDynamicPolling: boolean;
-			favoriteDriver: string;
-			favoriteTeam: string;
-			highlightColor: string;
-		}
-	}
-}
+import * as utils from "@iobroker/adapter-core";
+import axios from "axios";
 
 interface NextRace {
 	session_key: number;
@@ -130,30 +116,30 @@ interface Location {
 class F1 extends utils.Adapter {
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
-	private currentPollingMode: 'race' | 'normal' = 'normal';
+	private currentPollingMode: "race" | "normal" = "normal";
 	private currentSessionKey?: number;
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
-			name: 'f1',
+			name: "f1",
 		});
 
 		this.api = axios.create({
-			baseURL: 'https://api.openf1.org/v1',
+			baseURL: "https://api.openf1.org/v1",
 			timeout: 10000,
-			headers: { 'User-Agent': 'ioBroker.f1' }
+			headers: { "User-Agent": "ioBroker.f1" },
 		});
 
-		this.on('ready', this.onReady.bind(this));
-		this.on('stateChange', this.onStateChange.bind(this));
-		this.on('unload', this.onUnload.bind(this));
+		this.on("ready", this.onReady.bind(this));
+		this.on("stateChange", this.onStateChange.bind(this));
+		this.on("unload", this.onUnload.bind(this));
 	}
 
 	private async onReady(): Promise<void> {
-		this.log.info('Starting F1 adapter...');
+		this.log.info("Starting F1 adapter...");
 		await this.initializeStates();
-		await this.setStateAsync('info.connection', { val: false, ack: true });
+		await this.setStateAsync("info.connection", { val: false, ack: true });
 		await this.fetchData();
 		await this.updatePollingInterval();
 	}
@@ -167,27 +153,26 @@ class F1 extends utils.Adapter {
 
 		if (this.config.enableDynamicPolling) {
 			const hasActiveSession = await this.checkActiveSession();
-			
+
 			if (hasActiveSession) {
 				interval = (this.config.updateIntervalRace || 10) * 1000;
-				if (this.currentPollingMode !== 'race') {
-					this.currentPollingMode = 'race';
-					this.log.info('Switching to RACE mode');
+				if (this.currentPollingMode !== "race") {
+					this.currentPollingMode = "race";
+					this.log.info("Switching to RACE mode");
 				}
 			} else {
 				interval = (this.config.updateIntervalNormal || 3600) * 1000;
-				if (this.currentPollingMode !== 'normal') {
-					this.currentPollingMode = 'normal';
-					this.log.info('Switching to NORMAL mode');
+				if (this.currentPollingMode !== "normal") {
+					this.currentPollingMode = "normal";
+					this.log.info("Switching to NORMAL mode");
 				}
 			}
 		} else {
-			interval = (this.config.updateInterval || 60) * 1000;
-			this.log.info('Using legacy update interval');
+			interval = (this.config.updateIntervalNormal || 3600) * 1000;
 		}
 
 		this.updateInterval = setInterval(() => this.fetchData(), interval);
-		this.log.debug('Next update scheduled');
+		this.log.debug("Next update scheduled");
 	}
 
 	private async checkActiveSession(): Promise<boolean> {
@@ -196,11 +181,11 @@ class F1 extends utils.Adapter {
 			const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 			const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
 
-			const response = await this.api.get<Session[]>('/sessions', {
+			const response = await this.api.get<Session[]>("/sessions", {
 				params: {
 					date_start_gte: todayStart.toISOString(),
-					date_start_lte: todayEnd.toISOString()
-				}
+					date_start_lte: todayEnd.toISOString(),
+				},
 			});
 
 			if (!response.data || response.data.length === 0) {
@@ -212,7 +197,7 @@ class F1 extends utils.Adapter {
 				const sessionEnd = new Date(session.date_end);
 
 				if (now >= sessionStart && now <= sessionEnd) {
-					this.log.debug('Active session detected');
+					this.log.debug("Active session detected");
 					this.currentSessionKey = session.session_key;
 					return true;
 				}
@@ -223,7 +208,7 @@ class F1 extends utils.Adapter {
 				const minutesUntilStart = (sessionStart.getTime() - now.getTime()) / (1000 * 60);
 
 				if (minutesUntilStart > 0 && minutesUntilStart <= 30) {
-					this.log.debug('Session starting soon');
+					this.log.debug("Session starting soon");
 					this.currentSessionKey = session.session_key;
 					return true;
 				}
@@ -231,318 +216,318 @@ class F1 extends utils.Adapter {
 
 			this.currentSessionKey = undefined;
 			return false;
-		} catch (error) {
-			this.log.debug('Failed to check active session');
+		} catch {
+			this.log.debug("Failed to check active session");
 			return false;
 		}
 	}
 
 	private async initializeStates(): Promise<void> {
 		// Next Race
-		await this.setObjectNotExistsAsync('next_race', {
-			type: 'channel',
-			common: { name: 'Next Race Information' },
-			native: {}
+		await this.setObjectNotExistsAsync("next_race", {
+			type: "channel",
+			common: { name: "Next Race Information" },
+			native: {},
 		});
 
 		const raceStates = [
-			{ id: 'circuit', name: 'Circuit Name', type: 'string', role: 'text' },
-			{ id: 'country', name: 'Country', type: 'string', role: 'text' },
-			{ id: 'location', name: 'Location', type: 'string', role: 'text' },
-			{ id: 'date_start', name: 'Race Start', type: 'string', role: 'date' },
-			{ id: 'countdown_days', name: 'Days until race', type: 'number', role: 'value', unit: 'days' },
-			{ id: 'json', name: 'Next Race (JSON)', type: 'string', role: 'json' }
+			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
+			{ id: "country", name: "Country", type: "string", role: "text" },
+			{ id: "location", name: "Location", type: "string", role: "text" },
+			{ id: "date_start", name: "Race Start", type: "string", role: "date" },
+			{ id: "countdown_days", name: "Days until race", type: "number", role: "value", unit: "days" },
+			{ id: "json", name: "Next Race (JSON)", type: "string", role: "json" },
 		];
 
 		for (const state of raceStates) {
-			await this.setObjectNotExistsAsync('next_race.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`next_race.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: state.type as 'string' | 'number',
+					type: state.type as "string" | "number",
 					role: state.role,
 					read: true,
 					write: false,
-					...(state.unit && { unit: state.unit })
+					...(state.unit && { unit: state.unit }),
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Standings
-		await this.setObjectNotExistsAsync('standings', {
-			type: 'channel',
-			common: { name: 'Championship Standings' },
-			native: {}
+		await this.setObjectNotExistsAsync("standings", {
+			type: "channel",
+			common: { name: "Championship Standings" },
+			native: {},
 		});
 
 		const standingsStates = [
-			{ id: 'drivers', name: 'Driver Standings', type: 'string', role: 'json' },
-			{ id: 'teams', name: 'Team Standings', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "drivers", name: "Driver Standings", type: "string", role: "json" },
+			{ id: "teams", name: "Team Standings", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of standingsStates) {
-			await this.setObjectNotExistsAsync('standings.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`standings.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: state.type as 'string',
+					type: state.type as "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Live Session
-		await this.setObjectNotExistsAsync('live_session', {
-			type: 'channel',
-			common: { name: 'Live Session Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("live_session", {
+			type: "channel",
+			common: { name: "Live Session Data" },
+			native: {},
 		});
 
 		const liveStates = [
-			{ id: 'status', name: 'Session Status', type: 'string', role: 'text' },
-			{ id: 'type', name: 'Session Type', type: 'string', role: 'text' },
-			{ id: 'track_status', name: 'Track Status', type: 'string', role: 'text' },
-			{ id: 'laps_total', name: 'Total Laps', type: 'number', role: 'value' },
-			{ id: 'weather', name: 'Weather Data', type: 'string', role: 'json' }
+			{ id: "status", name: "Session Status", type: "string", role: "text" },
+			{ id: "type", name: "Session Type", type: "string", role: "text" },
+			{ id: "track_status", name: "Track Status", type: "string", role: "text" },
+			{ id: "laps_total", name: "Total Laps", type: "number", role: "value" },
+			{ id: "weather", name: "Weather Data", type: "string", role: "json" },
 		];
 
 		for (const state of liveStates) {
-			await this.setObjectNotExistsAsync('live_session.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`live_session.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: state.type as 'string' | 'number',
+					type: state.type as "string" | "number",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Race Control
-		await this.setObjectNotExistsAsync('race_control', {
-			type: 'channel',
-			common: { name: 'Race Control Messages' },
-			native: {}
+		await this.setObjectNotExistsAsync("race_control", {
+			type: "channel",
+			common: { name: "Race Control Messages" },
+			native: {},
 		});
 
 		const raceControlStates = [
-			{ id: 'latest_message', name: 'Latest Message', type: 'string', role: 'text' },
-			{ id: 'messages', name: 'All Messages', type: 'string', role: 'json' }
+			{ id: "latest_message", name: "Latest Message", type: "string", role: "text" },
+			{ id: "messages", name: "All Messages", type: "string", role: "json" },
 		];
 
 		for (const state of raceControlStates) {
-			await this.setObjectNotExistsAsync('race_control.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`race_control.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Positions
-		await this.setObjectNotExistsAsync('positions', {
-			type: 'channel',
-			common: { name: 'Driver Positions' },
-			native: {}
+		await this.setObjectNotExistsAsync("positions", {
+			type: "channel",
+			common: { name: "Driver Positions" },
+			native: {},
 		});
 
 		const positionStates = [
-			{ id: 'current', name: 'Current Positions', type: 'string', role: 'json' },
-			{ id: 'intervals', name: 'Intervals', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "current", name: "Current Positions", type: "string", role: "json" },
+			{ id: "intervals", name: "Intervals", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of positionStates) {
-			await this.setObjectNotExistsAsync('positions.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`positions.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Laps
-		await this.setObjectNotExistsAsync('laps', {
-			type: 'channel',
-			common: { name: 'Lap Timing Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("laps", {
+			type: "channel",
+			common: { name: "Lap Timing Data" },
+			native: {},
 		});
 
 		const lapStates = [
-			{ id: 'current', name: 'Current Lap Times', type: 'string', role: 'json' },
-			{ id: 'fastest', name: 'Fastest Laps', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "current", name: "Current Lap Times", type: "string", role: "json" },
+			{ id: "fastest", name: "Fastest Laps", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of lapStates) {
-			await this.setObjectNotExistsAsync('laps.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`laps.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Pit Stops
-		await this.setObjectNotExistsAsync('pit_stops', {
-			type: 'channel',
-			common: { name: 'Pit Stop Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("pit_stops", {
+			type: "channel",
+			common: { name: "Pit Stop Data" },
+			native: {},
 		});
 
 		const pitStates = [
-			{ id: 'latest', name: 'Latest Pit Stops', type: 'string', role: 'json' },
-			{ id: 'all', name: 'All Pit Stops', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "latest", name: "Latest Pit Stops", type: "string", role: "json" },
+			{ id: "all", name: "All Pit Stops", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of pitStates) {
-			await this.setObjectNotExistsAsync('pit_stops.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`pit_stops.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Tyres (NEW)
-		await this.setObjectNotExistsAsync('tyres', {
-			type: 'channel',
-			common: { name: 'Tyre Strategy Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("tyres", {
+			type: "channel",
+			common: { name: "Tyre Strategy Data" },
+			native: {},
 		});
 
 		const tyreStates = [
-			{ id: 'stints', name: 'Tyre Stints', type: 'string', role: 'json' },
-			{ id: 'current', name: 'Current Tyres', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "stints", name: "Tyre Stints", type: "string", role: "json" },
+			{ id: "current", name: "Current Tyres", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of tyreStates) {
-			await this.setObjectNotExistsAsync('tyres.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`tyres.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Team Radio (NEW)
-		await this.setObjectNotExistsAsync('radio', {
-			type: 'channel',
-			common: { name: 'Team Radio Messages' },
-			native: {}
+		await this.setObjectNotExistsAsync("radio", {
+			type: "channel",
+			common: { name: "Team Radio Messages" },
+			native: {},
 		});
 
 		const radioStates = [
-			{ id: 'latest', name: 'Latest Radio Messages', type: 'string', role: 'json' },
-			{ id: 'all', name: 'All Radio Messages', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "latest", name: "Latest Radio Messages", type: "string", role: "json" },
+			{ id: "all", name: "All Radio Messages", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of radioStates) {
-			await this.setObjectNotExistsAsync('radio.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`radio.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Car Data (NEW)
-		await this.setObjectNotExistsAsync('car_data', {
-			type: 'channel',
-			common: { name: 'Car Telemetry Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("car_data", {
+			type: "channel",
+			common: { name: "Car Telemetry Data" },
+			native: {},
 		});
 
 		const carDataStates = [
-			{ id: 'latest', name: 'Latest Telemetry', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "latest", name: "Latest Telemetry", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of carDataStates) {
-			await this.setObjectNotExistsAsync('car_data.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`car_data.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 
 		// Location (NEW)
-		await this.setObjectNotExistsAsync('location', {
-			type: 'channel',
-			common: { name: 'Car Location Data' },
-			native: {}
+		await this.setObjectNotExistsAsync("location", {
+			type: "channel",
+			common: { name: "Car Location Data" },
+			native: {},
 		});
 
 		const locationStates = [
-			{ id: 'current', name: 'Current Positions', type: 'string', role: 'json' },
-			{ id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+			{ id: "current", name: "Current Positions", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 		];
 
 		for (const state of locationStates) {
-			await this.setObjectNotExistsAsync('location.' + state.id, {
-				type: 'state',
+			await this.setObjectNotExistsAsync(`location.${state.id}`, {
+				type: "state",
 				common: {
 					name: state.name,
-					type: 'string',
+					type: "string",
 					role: state.role,
 					read: true,
-					write: false
+					write: false,
 				},
-				native: {}
+				native: {},
 			});
 		}
 	}
 
 	private async fetchData(): Promise<void> {
 		try {
-			this.log.debug('Fetching data from OpenF1 API...');
-			
+			this.log.debug("Fetching data from OpenF1 API...");
+
 			const nextRace = await this.getNextRace();
 			if (nextRace) {
 				await this.updateNextRaceStates(nextRace);
@@ -561,17 +546,17 @@ class F1 extends utils.Adapter {
 				await this.updateCarData();
 				await this.updateLocation();
 			} else {
-				await this.setStateAsync('live_session.status', { val: 'no_session', ack: true });
+				await this.setStateAsync("live_session.status", { val: "no_session", ack: true });
 			}
 
-			await this.setStateAsync('info.connection', { val: true, ack: true });
+			await this.setStateAsync("info.connection", { val: true, ack: true });
 
 			if (this.config.enableDynamicPolling) {
 				await this.updatePollingInterval();
 			}
-		} catch (error) {
-			this.log.error('Failed to fetch data');
-			await this.setStateAsync('info.connection', { val: false, ack: true });
+		} catch {
+			this.log.error("Failed to fetch data");
+			await this.setStateAsync("info.connection", { val: false, ack: true });
 		}
 	}
 
@@ -579,44 +564,43 @@ class F1 extends utils.Adapter {
 		try {
 			const now = new Date();
 			const year = now.getFullYear();
-			
-			const response = await this.api.get<NextRace[]>('/sessions', {
-				params: { session_name: 'Race', year: year }
+
+			const response = await this.api.get<NextRace[]>("/sessions", {
+				params: { session_name: "Race", year: year },
 			});
 
 			if (response.data && response.data.length > 0) {
-				const futureRaces = response.data.filter((race: NextRace) => 
-					new Date(race.date_start) > now
-				);
+				const futureRaces = response.data.filter((race: NextRace) => new Date(race.date_start) > now);
 
 				if (futureRaces.length > 0) {
-					return futureRaces.sort((a: NextRace, b: NextRace) => 
-						new Date(a.date_start).getTime() - new Date(b.date_start).getTime()
+					return futureRaces.sort(
+						(a: NextRace, b: NextRace) =>
+							new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
 					)[0];
 				}
 			}
 			return null;
-		} catch (error) {
-			this.log.error('Failed to get next race');
+		} catch {
+			this.log.error("Failed to get next race");
 			return null;
 		}
 	}
 
 	private async updateNextRaceStates(race: NextRace): Promise<void> {
-		await this.setStateAsync('next_race.circuit', { val: race.circuit_short_name, ack: true });
-		await this.setStateAsync('next_race.country', { val: race.country_name, ack: true });
-		await this.setStateAsync('next_race.location', { val: race.location, ack: true });
-		await this.setStateAsync('next_race.date_start', { val: race.date_start, ack: true });
+		await this.setStateAsync("next_race.circuit", { val: race.circuit_short_name, ack: true });
+		await this.setStateAsync("next_race.country", { val: race.country_name, ack: true });
+		await this.setStateAsync("next_race.location", { val: race.location, ack: true });
+		await this.setStateAsync("next_race.date_start", { val: race.date_start, ack: true });
 		const daysUntil = Math.ceil((new Date(race.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-		await this.setStateAsync('next_race.countdown_days', { val: daysUntil, ack: true });
-		await this.setStateAsync('next_race.json', { val: JSON.stringify(race, null, 2), ack: true });
-		this.log.debug('Next race updated');
+		await this.setStateAsync("next_race.countdown_days", { val: daysUntil, ack: true });
+		await this.setStateAsync("next_race.json", { val: JSON.stringify(race, null, 2), ack: true });
+		this.log.debug("Next race updated");
 	}
 
 	private async updateStandings(): Promise<void> {
 		try {
-			const response = await this.api.get<Driver[]>('/drivers', {
-				params: { session_key: 'latest' }
+			const response = await this.api.get<Driver[]>("/drivers", {
+				params: { session_key: "latest" },
 			});
 
 			if (response.data && response.data.length > 0) {
@@ -628,36 +612,37 @@ class F1 extends utils.Adapter {
 				});
 
 				const teams = Array.from(
-					new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }]))
-					.values()
+					new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }])).values(),
 				);
 
-				await this.setStateAsync('standings.drivers', { 
-					val: JSON.stringify(drivers, null, 2), 
-					ack: true 
+				await this.setStateAsync("standings.drivers", {
+					val: JSON.stringify(drivers, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('standings.teams', { 
-					val: JSON.stringify(teams, null, 2), 
-					ack: true 
+				await this.setStateAsync("standings.teams", {
+					val: JSON.stringify(teams, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('standings.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("standings.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated standings');
+				this.log.debug("Updated standings");
 			}
-		} catch (error) {
-			this.log.error('Failed to update standings');
+		} catch {
+			this.log.error("Failed to update standings");
 		}
 	}
 
 	private async updateLiveSession(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const sessionResponse = await this.api.get<Session[]>('/sessions', {
-				params: { session_key: this.currentSessionKey }
+			const sessionResponse = await this.api.get<Session[]>("/sessions", {
+				params: { session_key: this.currentSessionKey },
 			});
 
 			if (sessionResponse.data && sessionResponse.data.length > 0) {
@@ -666,76 +651,82 @@ class F1 extends utils.Adapter {
 				const sessionStart = new Date(session.date_start);
 				const sessionEnd = new Date(session.date_end);
 
-				let status = 'unknown';
-				if (now < sessionStart) status = 'pre_session';
-				else if (now >= sessionStart && now <= sessionEnd) status = 'active';
-				else status = 'finished';
+				let status = "unknown";
+				if (now < sessionStart) {
+					status = "pre_session";
+				} else if (now >= sessionStart && now <= sessionEnd) {
+					status = "active";
+				} else {
+					status = "finished";
+				}
 
-				await this.setStateAsync('live_session.status', { val: status, ack: true });
-				await this.setStateAsync('live_session.type', { val: session.session_name, ack: true });
+				await this.setStateAsync("live_session.status", { val: status, ack: true });
+				await this.setStateAsync("live_session.type", { val: session.session_name, ack: true });
 			}
 
-			const weatherResponse = await this.api.get<Weather[]>('/weather', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const weatherResponse = await this.api.get<Weather[]>("/weather", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (weatherResponse.data && weatherResponse.data.length > 0) {
 				const latestWeather = weatherResponse.data[weatherResponse.data.length - 1];
-				await this.setStateAsync('live_session.weather', { 
-					val: JSON.stringify(latestWeather, null, 2), 
-					ack: true 
+				await this.setStateAsync("live_session.weather", {
+					val: JSON.stringify(latestWeather, null, 2),
+					ack: true,
 				});
 			}
 
-			this.log.debug('Updated live session');
-		} catch (error) {
-			this.log.debug('Failed to update live session');
+			this.log.debug("Updated live session");
+		} catch {
+			this.log.debug("Failed to update live session");
 		}
 	}
 
 	private async updateRaceControl(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<RaceControlMessage[]>('/race_control', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<RaceControlMessage[]>("/race_control", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
-				const messages = response.data.sort((a, b) => 
-					new Date(b.date).getTime() - new Date(a.date).getTime()
-				);
+				const messages = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 				const latestMessage = messages[0];
-				const msgText = latestMessage.message + ' (' + (latestMessage.flag || latestMessage.category) + ')';
-				await this.setStateAsync('race_control.latest_message', { 
-					val: msgText, 
-					ack: true 
+				const msgText = `${latestMessage.message} (${latestMessage.flag || latestMessage.category})`;
+				await this.setStateAsync("race_control.latest_message", {
+					val: msgText,
+					ack: true,
 				});
-				await this.setStateAsync('race_control.messages', { 
-					val: JSON.stringify(messages, null, 2), 
-					ack: true 
+				await this.setStateAsync("race_control.messages", {
+					val: JSON.stringify(messages, null, 2),
+					ack: true,
 				});
 
-				this.log.debug('Updated race control');
+				this.log.debug("Updated race control");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update race control');
+		} catch {
+			this.log.debug("Failed to update race control");
 		}
 	}
 
 	private async updatePositions(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const posResponse = await this.api.get<Position[]>('/position', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const posResponse = await this.api.get<Position[]>("/position", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (posResponse.data && posResponse.data.length > 0) {
@@ -744,43 +735,45 @@ class F1 extends utils.Adapter {
 					.slice(0, 20)
 					.sort((a, b) => a.position - b.position);
 
-				await this.setStateAsync('positions.current', { 
-					val: JSON.stringify(latestPositions, null, 2), 
-					ack: true 
+				await this.setStateAsync("positions.current", {
+					val: JSON.stringify(latestPositions, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('positions.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("positions.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 			}
 
-			const intResponse = await this.api.get<Interval[]>('/intervals', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const intResponse = await this.api.get<Interval[]>("/intervals", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (intResponse.data && intResponse.data.length > 0) {
-				await this.setStateAsync('positions.intervals', { 
-					val: JSON.stringify(intResponse.data, null, 2), 
-					ack: true 
+				await this.setStateAsync("positions.intervals", {
+					val: JSON.stringify(intResponse.data, null, 2),
+					ack: true,
 				});
 			}
 
-			this.log.debug('Updated positions');
-		} catch (error) {
-			this.log.debug('Failed to update positions');
+			this.log.debug("Updated positions");
+		} catch {
+			this.log.debug("Failed to update positions");
 		}
 	}
 
 	private async updateLaps(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<Lap[]>('/laps', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<Lap[]>("/laps", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
@@ -794,71 +787,73 @@ class F1 extends utils.Adapter {
 					.sort((a, b) => a.lap_duration - b.lap_duration)
 					.slice(0, 10);
 
-				await this.setStateAsync('laps.current', { 
-					val: JSON.stringify(currentLaps, null, 2), 
-					ack: true 
+				await this.setStateAsync("laps.current", {
+					val: JSON.stringify(currentLaps, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('laps.fastest', { 
-					val: JSON.stringify(fastestLaps, null, 2), 
-					ack: true 
+				await this.setStateAsync("laps.fastest", {
+					val: JSON.stringify(fastestLaps, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('laps.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("laps.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated lap times');
+				this.log.debug("Updated lap times");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update lap times');
+		} catch {
+			this.log.debug("Failed to update lap times");
 		}
 	}
 
 	private async updatePitStops(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<PitStop[]>('/pit', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<PitStop[]>("/pit", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
-				const allPits = response.data.sort((a, b) => 
-					new Date(b.date).getTime() - new Date(a.date).getTime()
-				);
+				const allPits = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 				const latestPits = allPits.slice(0, 5);
 
-				await this.setStateAsync('pit_stops.latest', { 
-					val: JSON.stringify(latestPits, null, 2), 
-					ack: true 
+				await this.setStateAsync("pit_stops.latest", {
+					val: JSON.stringify(latestPits, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('pit_stops.all', { 
-					val: JSON.stringify(allPits, null, 2), 
-					ack: true 
+				await this.setStateAsync("pit_stops.all", {
+					val: JSON.stringify(allPits, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('pit_stops.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("pit_stops.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated pit stops');
+				this.log.debug("Updated pit stops");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update pit stops');
+		} catch {
+			this.log.debug("Failed to update pit stops");
 		}
 	}
 
 	private async updateTyres(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<Stint[]>('/stints', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<Stint[]>("/stints", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
@@ -871,7 +866,7 @@ class F1 extends utils.Adapter {
 
 				const currentTyres: any[] = [];
 				const seenDrivers = new Set<number>();
-				
+
 				for (const stint of allStints) {
 					if (!seenDrivers.has(stint.driver_number)) {
 						currentTyres.push(stint);
@@ -879,71 +874,73 @@ class F1 extends utils.Adapter {
 					}
 				}
 
-				await this.setStateAsync('tyres.stints', { 
-					val: JSON.stringify(allStints, null, 2), 
-					ack: true 
+				await this.setStateAsync("tyres.stints", {
+					val: JSON.stringify(allStints, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('tyres.current', { 
-					val: JSON.stringify(currentTyres, null, 2), 
-					ack: true 
+				await this.setStateAsync("tyres.current", {
+					val: JSON.stringify(currentTyres, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('tyres.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("tyres.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated tyre data');
+				this.log.debug("Updated tyre data");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update tyre data');
+		} catch {
+			this.log.debug("Failed to update tyre data");
 		}
 	}
 
 	private async updateRadio(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<Radio[]>('/team_radio', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<Radio[]>("/team_radio", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
-				const allRadio = response.data.sort((a, b) => 
-					new Date(b.date).getTime() - new Date(a.date).getTime()
-				);
+				const allRadio = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 				const latestRadio = allRadio.slice(0, 10);
 
-				await this.setStateAsync('radio.latest', { 
-					val: JSON.stringify(latestRadio, null, 2), 
-					ack: true 
+				await this.setStateAsync("radio.latest", {
+					val: JSON.stringify(latestRadio, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('radio.all', { 
-					val: JSON.stringify(allRadio, null, 2), 
-					ack: true 
+				await this.setStateAsync("radio.all", {
+					val: JSON.stringify(allRadio, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('radio.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("radio.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated team radio');
+				this.log.debug("Updated team radio");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update team radio');
+		} catch {
+			this.log.debug("Failed to update team radio");
 		}
 	}
 
 	private async updateCarData(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<CarData[]>('/car_data', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<CarData[]>("/car_data", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
@@ -951,30 +948,32 @@ class F1 extends utils.Adapter {
 					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 					.slice(0, 20);
 
-				await this.setStateAsync('car_data.latest', { 
-					val: JSON.stringify(latestData, null, 2), 
-					ack: true 
+				await this.setStateAsync("car_data.latest", {
+					val: JSON.stringify(latestData, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('car_data.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("car_data.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated car telemetry');
+				this.log.debug("Updated car telemetry");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update car telemetry');
+		} catch {
+			this.log.debug("Failed to update car telemetry");
 		}
 	}
 
 	private async updateLocation(): Promise<void> {
-		if (!this.currentSessionKey) return;
+		if (!this.currentSessionKey) {
+			return;
+		}
 
 		try {
-			const response = await this.api.get<Location[]>('/location', {
-				params: { 
-					session_key: this.currentSessionKey
-				}
+			const response = await this.api.get<Location[]>("/location", {
+				params: {
+					session_key: this.currentSessionKey,
+				},
 			});
 
 			if (response.data && response.data.length > 0) {
@@ -982,33 +981,40 @@ class F1 extends utils.Adapter {
 					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 					.slice(0, 20);
 
-				await this.setStateAsync('location.current', { 
-					val: JSON.stringify(latestLocations, null, 2), 
-					ack: true 
+				await this.setStateAsync("location.current", {
+					val: JSON.stringify(latestLocations, null, 2),
+					ack: true,
 				});
-				await this.setStateAsync('location.last_update', { 
-					val: new Date().toISOString(), 
-					ack: true 
+				await this.setStateAsync("location.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
 				});
 
-				this.log.debug('Updated car locations');
+				this.log.debug("Updated car locations");
 			}
-		} catch (error) {
-			this.log.debug('Failed to update car locations');
+		} catch {
+			this.log.debug("Failed to update car locations");
 		}
 	}
 
 	private onUnload(callback: () => void): void {
 		try {
-			if (this.updateInterval) clearInterval(this.updateInterval);
-			this.log.info('F1 adapter stopped');
+			if (this.updateInterval) {
+				clearInterval(this.updateInterval);
+			}
+			this.log.info("F1 adapter stopped");
 			callback();
-		} catch { callback(); }
+		} catch {
+			callback();
+		}
 	}
 
 	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
-		if (state) this.log.debug('state changed');
-		else this.log.debug('state deleted');
+		if (state) {
+			this.log.debug("state changed");
+		} else {
+			this.log.debug("state deleted");
+		}
 	}
 }
 

@@ -1,5 +1,24 @@
 {
-	"template adapter settings": "Ajustes del adaptador para template",
-	"option1": "opción1",
-	"option2": "opción2"
+	"Formula 1 Adapter Settings": "Configuración del adaptador Fórmula 1",
+	"Configure update intervals and polling behavior for OpenF1 API.": "Configurar los intervalos de actualización y el comportamiento de sondeo para la API OpenF1.",
+	"Polling Configuration": "Configuración de sondeo",
+	"Enable dynamic polling": "Activar sondeo dinámico",
+	"Automatically switch between fast and slow polling based on race schedule": "Cambiar automáticamente entre sondeo rápido y lento según el calendario de carreras",
+	"Update interval (normal)": "Intervalo de actualización (normal)",
+	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Intervalo de actualización en segundos sin sesión de carrera activa (predeterminado: 1 hora = 3600 s)",
+	"Update interval (race day)": "Intervalo de actualización (día de carrera)",
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Intervalo en segundos durante sesiones de carrera activas (predeterminado: 10 s). Límite OpenF1: 3 req/s, 30 req/min – ¡10 s es seguro!",
+	"Legacy Settings (deprecated)": "Configuración heredada (obsoleta)",
+	"The following setting is deprecated. Use dynamic polling instead.": "Esta configuración está obsoleta. Use el sondeo dinámico en su lugar.",
+	"Update Interval (deprecated)": "Intervalo de actualización (obsoleto)",
+	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "OBSOLETO: Use el sondeo dinámico. Esta configuración se ignora cuando el sondeo dinámico está activado.",
+	"Favorites (for future highlighting)": "Favoritos (para destacar en el futuro)",
+	"Favorite Driver": "Piloto favorito",
+	"e.g., Max Verstappen": "p. ej., Max Verstappen",
+	"Your favorite driver (will be highlighted in future widgets)": "Tu piloto favorito (se destacará en futuros widgets)",
+	"Favorite Team": "Equipo favorito",
+	"e.g., Red Bull Racing": "p. ej., Red Bull Racing",
+	"Your favorite team (will be highlighted in future widgets)": "Tu equipo favorito (se destacará en futuros widgets)",
+	"Highlight Color": "Color de resaltado",
+	"Color for highlighting favorites (hex code)": "Color para resaltar favoritos (código hexadecimal)"
 }
