@@ -134,6 +134,7 @@ class F1 extends utils.Adapter {
         }
     }
     async initializeStates() {
+        // Next Race
         await this.setObjectNotExistsAsync('next_race', {
             type: 'channel',
             common: { name: 'Next Race Information' },
@@ -161,6 +162,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Standings
         await this.setObjectNotExistsAsync('standings', {
             type: 'channel',
             common: { name: 'Championship Standings' },
@@ -184,6 +186,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Live Session
         await this.setObjectNotExistsAsync('live_session', {
             type: 'channel',
             common: { name: 'Live Session Data' },
@@ -209,6 +212,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Race Control
         await this.setObjectNotExistsAsync('race_control', {
             type: 'channel',
             common: { name: 'Race Control Messages' },
@@ -231,6 +235,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Positions
         await this.setObjectNotExistsAsync('positions', {
             type: 'channel',
             common: { name: 'Driver Positions' },
@@ -254,6 +259,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Laps
         await this.setObjectNotExistsAsync('laps', {
             type: 'channel',
             common: { name: 'Lap Timing Data' },
@@ -277,6 +283,7 @@ class F1 extends utils.Adapter {
                 native: {}
             });
         }
+        // Pit Stops
         await this.setObjectNotExistsAsync('pit_stops', {
             type: 'channel',
             common: { name: 'Pit Stop Data' },
@@ -289,6 +296,100 @@ class F1 extends utils.Adapter {
         ];
         for (const state of pitStates) {
             await this.setObjectNotExistsAsync('pit_stops.' + state.id, {
+                type: 'state',
+                common: {
+                    name: state.name,
+                    type: 'string',
+                    role: state.role,
+                    read: true,
+                    write: false
+                },
+                native: {}
+            });
+        }
+        // Tyres (NEW)
+        await this.setObjectNotExistsAsync('tyres', {
+            type: 'channel',
+            common: { name: 'Tyre Strategy Data' },
+            native: {}
+        });
+        const tyreStates = [
+            { id: 'stints', name: 'Tyre Stints', type: 'string', role: 'json' },
+            { id: 'current', name: 'Current Tyres', type: 'string', role: 'json' },
+            { id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+        ];
+        for (const state of tyreStates) {
+            await this.setObjectNotExistsAsync('tyres.' + state.id, {
+                type: 'state',
+                common: {
+                    name: state.name,
+                    type: 'string',
+                    role: state.role,
+                    read: true,
+                    write: false
+                },
+                native: {}
+            });
+        }
+        // Team Radio (NEW)
+        await this.setObjectNotExistsAsync('radio', {
+            type: 'channel',
+            common: { name: 'Team Radio Messages' },
+            native: {}
+        });
+        const radioStates = [
+            { id: 'latest', name: 'Latest Radio Messages', type: 'string', role: 'json' },
+            { id: 'all', name: 'All Radio Messages', type: 'string', role: 'json' },
+            { id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+        ];
+        for (const state of radioStates) {
+            await this.setObjectNotExistsAsync('radio.' + state.id, {
+                type: 'state',
+                common: {
+                    name: state.name,
+                    type: 'string',
+                    role: state.role,
+                    read: true,
+                    write: false
+                },
+                native: {}
+            });
+        }
+        // Car Data (NEW)
+        await this.setObjectNotExistsAsync('car_data', {
+            type: 'channel',
+            common: { name: 'Car Telemetry Data' },
+            native: {}
+        });
+        const carDataStates = [
+            { id: 'latest', name: 'Latest Telemetry', type: 'string', role: 'json' },
+            { id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+        ];
+        for (const state of carDataStates) {
+            await this.setObjectNotExistsAsync('car_data.' + state.id, {
+                type: 'state',
+                common: {
+                    name: state.name,
+                    type: 'string',
+                    role: state.role,
+                    read: true,
+                    write: false
+                },
+                native: {}
+            });
+        }
+        // Location (NEW)
+        await this.setObjectNotExistsAsync('location', {
+            type: 'channel',
+            common: { name: 'Car Location Data' },
+            native: {}
+        });
+        const locationStates = [
+            { id: 'current', name: 'Current Positions', type: 'string', role: 'json' },
+            { id: 'last_update', name: 'Last Update', type: 'string', role: 'date' }
+        ];
+        for (const state of locationStates) {
+            await this.setObjectNotExistsAsync('location.' + state.id, {
                 type: 'state',
                 common: {
                     name: state.name,
@@ -315,6 +416,10 @@ class F1 extends utils.Adapter {
                 await this.updatePositions();
                 await this.updateLaps();
                 await this.updatePitStops();
+                await this.updateTyres();
+                await this.updateRadio();
+                await this.updateCarData();
+                await this.updateLocation();
             }
             else {
                 await this.setStateAsync('live_session.status', { val: 'no_session', ack: true });
@@ -566,6 +671,136 @@ class F1 extends utils.Adapter {
         }
         catch (error) {
             this.log.debug('Failed to update pit stops');
+        }
+    }
+    async updateTyres() {
+        if (!this.currentSessionKey)
+            return;
+        try {
+            const response = await this.api.get('/stints', {
+                params: {
+                    session_key: this.currentSessionKey
+                }
+            });
+            if (response.data && response.data.length > 0) {
+                const allStints = response.data.sort((a, b) => {
+                    if (a.driver_number === b.driver_number) {
+                        return b.stint_number - a.stint_number;
+                    }
+                    return a.driver_number - b.driver_number;
+                });
+                const currentTyres = [];
+                const seenDrivers = new Set();
+                for (const stint of allStints) {
+                    if (!seenDrivers.has(stint.driver_number)) {
+                        currentTyres.push(stint);
+                        seenDrivers.add(stint.driver_number);
+                    }
+                }
+                await this.setStateAsync('tyres.stints', {
+                    val: JSON.stringify(allStints, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('tyres.current', {
+                    val: JSON.stringify(currentTyres, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('tyres.last_update', {
+                    val: new Date().toISOString(),
+                    ack: true
+                });
+                this.log.debug('Updated tyre data');
+            }
+        }
+        catch (error) {
+            this.log.debug('Failed to update tyre data');
+        }
+    }
+    async updateRadio() {
+        if (!this.currentSessionKey)
+            return;
+        try {
+            const response = await this.api.get('/team_radio', {
+                params: {
+                    session_key: this.currentSessionKey
+                }
+            });
+            if (response.data && response.data.length > 0) {
+                const allRadio = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const latestRadio = allRadio.slice(0, 10);
+                await this.setStateAsync('radio.latest', {
+                    val: JSON.stringify(latestRadio, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('radio.all', {
+                    val: JSON.stringify(allRadio, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('radio.last_update', {
+                    val: new Date().toISOString(),
+                    ack: true
+                });
+                this.log.debug('Updated team radio');
+            }
+        }
+        catch (error) {
+            this.log.debug('Failed to update team radio');
+        }
+    }
+    async updateCarData() {
+        if (!this.currentSessionKey)
+            return;
+        try {
+            const response = await this.api.get('/car_data', {
+                params: {
+                    session_key: this.currentSessionKey
+                }
+            });
+            if (response.data && response.data.length > 0) {
+                const latestData = response.data
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 20);
+                await this.setStateAsync('car_data.latest', {
+                    val: JSON.stringify(latestData, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('car_data.last_update', {
+                    val: new Date().toISOString(),
+                    ack: true
+                });
+                this.log.debug('Updated car telemetry');
+            }
+        }
+        catch (error) {
+            this.log.debug('Failed to update car telemetry');
+        }
+    }
+    async updateLocation() {
+        if (!this.currentSessionKey)
+            return;
+        try {
+            const response = await this.api.get('/location', {
+                params: {
+                    session_key: this.currentSessionKey
+                }
+            });
+            if (response.data && response.data.length > 0) {
+                const latestLocations = response.data
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 20);
+                await this.setStateAsync('location.current', {
+                    val: JSON.stringify(latestLocations, null, 2),
+                    ack: true
+                });
+                await this.setStateAsync('location.last_update', {
+                    val: new Date().toISOString(),
+                    ack: true
+                });
+                this.log.debug('Updated car locations');
+            }
+        }
+        catch (error) {
+            this.log.debug('Failed to update car locations');
         }
     }
     onUnload(callback) {
