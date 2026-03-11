@@ -22,22 +22,6 @@ Requires these ioBroker states:
 - `f1.0.next_race.date_start` - ISO 8601 timestamp
 - `f1.0.next_race.countdown_days` - Days until race (number)
 
-## Installation
-
-1. Copy widget files to VIS:
-   ```
-   /opt/iobroker/iobroker-data/files/vis.0/widgets/f1-race-countdown/
-   ```
-
-2. Add widget to VIS view via widget selector
-
-3. Configure data bindings in widget settings:
-   - Circuit OID: `f1.0.next_race.circuit`
-   - Country OID: `f1.0.next_race.country`
-   - Location OID: `f1.0.next_race.location`
-   - Date OID: `f1.0.next_race.date_start`
-   - Countdown OID: `f1.0.next_race.countdown_days`
-
 ## Preview
 
 Open `preview.html` in a browser to see the widget design.
@@ -51,6 +35,3 @@ Edit `css/f1-race-countdown.css` to customize colors and layout:
 - Accent color: `#9D4EDD` (purple)
 - Text: `#ffffff`
 
-## Version
-
-0.1.0 - Initial release
