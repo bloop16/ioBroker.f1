@@ -140,3 +140,12 @@
         <div class="f1-pitstop-content"><div class="f1-pitstop-empty">Loading...</div></div>
     </div>
 </script>
+
+<script type="text/javascript" src="widgets/f1-lap-times/js/f1-lap-times.js"></script>
+<link rel="stylesheet" href="widgets/f1-lap-times/css/f1-lap-times.css">
+<script id="tplF1LapTimes" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Lap Times" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">⏱️</div>' data-vis-attrs="">
+    <div class="vis-widget f1-laptimes-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:450px;height:500px;" <%= (el) -> vis.binds["f1"].createLapTimesWidget(el, view, data, style) %>>
+        <div class="f1-laptimes-header"><span class="f1-laptimes-title">FASTEST LAPS</span></div>
+        <div class="f1-laptimes-content"><div class="f1-laptimes-empty">Loading...</div></div>
+    </div>
+</script>
