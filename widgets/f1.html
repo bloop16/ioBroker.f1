@@ -111,3 +111,23 @@
         </div>
     </div>
 </script>
+
+<!--
+    ioBroker.f1 - Tyre Stats Card
+-->
+<script type="text/javascript" src="widgets/f1-tyre-stats/js/f1-tyre-stats.js"></script>
+<link rel="stylesheet" href="widgets/f1-tyre-stats/css/f1-tyre-stats.css">
+
+<script id="tplF1TyreStats"
+        type="text/ejs"
+        class="vis-tpl"
+        data-vis-set="f1"
+        data-vis-type="static"
+        data-vis-name="F1 Tyre Stats"
+        data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;gap:4px;"><div style="font-size:20px;">🏎️</div><div style="display:flex;gap:3px;"><div style="width:20px;height:12px;background:#ff0000;border-radius:2px;"></div><div style="width:20px;height:12px;background:#ffff00;border-radius:2px;"></div><div style="width:20px;height:12px;background:#fff;border-radius:2px;"></div></div></div>'
+        data-vis-attrs="">
+    <div class="vis-widget f1-tyre-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createTyreWidget(el, view, data, style) %>>
+        <div class="f1-tyre-header"><span class="f1-tyre-icon">🏎️</span><span class="f1-tyre-title">TYRE STATS</span></div>
+        <div class="f1-tyre-content"><div class="f1-tyre-empty">Loading...</div></div>
+    </div>
+</script>
