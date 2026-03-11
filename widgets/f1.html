@@ -85,3 +85,29 @@
         </div>
     </div>
 </script>
+
+<!--
+    ioBroker.f1 - Race Control Card
+    VIS1 Widget for race control messages and flags
+-->
+<script type="text/javascript" src="widgets/f1-race-control/js/f1-race-control.js"></script>
+<link rel="stylesheet" href="widgets/f1-race-control/css/f1-race-control.css">
+
+<script id="tplF1RaceControl"
+        type="text/ejs"
+        class="vis-tpl"
+        data-vis-set="f1"
+        data-vis-type="static"
+        data-vis-name="F1 Race Control"
+        data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;gap:4px;"><div style="font-size:20px;">🚨</div><div style="color:#fbbf24;font-weight:bold;font-size:9px;letter-spacing:2px;">RACE CONTROL</div></div>'
+        data-vis-attrs="">
+    <div class="vis-widget f1-race-control-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:400px;" <%= (el) -> vis.binds["f1"].createRaceControlWidget(el, view, data, style) %>>
+        <div class="f1-race-control-header">
+            <span class="f1-race-control-icon">🚨</span>
+            <span class="f1-race-control-title">RACE CONTROL</span>
+        </div>
+        <div class="f1-race-control-content">
+            <div class="f1-race-control-empty">Waiting for messages...</div>
+        </div>
+    </div>
+</script>

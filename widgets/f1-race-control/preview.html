@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Control Card - Preview</title>
+    <link rel="stylesheet" href="css/f1-race-control.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="f1-race-control-widget" style="max-width: 400px; max-height: 500px;">
+        <div class="f1-race-control-header">
+            <span class="f1-race-control-icon">🚨</span>
+            <span class="f1-race-control-title">RACE CONTROL</span>
+        </div>
+        
+        <div class="f1-race-control-content">
+            <div class="f1-race-control-message yellow-flag">
+                <span class="f1-race-control-message-flag">🟡</span>
+                <div class="f1-race-control-message-content">
+                    <div class="f1-race-control-message-text">SAFETY CAR DEPLOYED - All drivers must reduce speed and follow Safety Car</div>
+                    <div class="f1-race-control-message-time">14:32:45</div>
+                </div>
+            </div>
+            
+            <div class="f1-race-control-message yellow-flag">
+                <span class="f1-race-control-message-flag">🟡</span>
+                <div class="f1-race-control-message-content">
+                    <div class="f1-race-control-message-text">YELLOW FLAG - Turn 7 - Incident</div>
+                    <div class="f1-race-control-message-time">14:32:12</div>
+                </div>
+            </div>
+            
+            <div class="f1-race-control-message green-flag">
+                <span class="f1-race-control-message-flag">🟢</span>
+                <div class="f1-race-control-message-content">
+                    <div class="f1-race-control-message-text">GREEN FLAG - Track Clear</div>
+                    <div class="f1-race-control-message-time">14:25:30</div>
+                </div>
+            </div>
+            
+            <div class="f1-race-control-message blue-flag">
+                <span class="f1-race-control-message-flag">🔵</span>
+                <div class="f1-race-control-message-content">
+                    <div class="f1-race-control-message-text">BLUE FLAG - Car 20 - Lapping</div>
+                    <div class="f1-race-control-message-time">14:20:15</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+/* ioBroker.f1 - Race Control Card */
+
+.f1-race-control-widget {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.f1-race-control-header {
+    background: #242424;
+    padding: 12px 16px;
+    border-bottom: 2px solid #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.f1-race-control-icon {
+    font-size: 18px;
+}
+
+.f1-race-control-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.f1-race-control-content {
+    padding: 12px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.f1-race-control-message {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #242424;
+    border-radius: 6px;
+    border-left: 3px solid #fbbf24;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.f1-race-control-message.green-flag {
+    border-left-color: #10b981;
+}
+
+.f1-race-control-message.yellow-flag {
+    border-left-color: #fbbf24;
+}
+
+.f1-race-control-message.red-flag {
+    border-left-color: #ef4444;
+}
+
+.f1-race-control-message.blue-flag {
+    border-left-color: #3b82f6;
+}
+
+.f1-race-control-message.white-flag {
+    border-left-color: #ffffff;
+}
+
+.f1-race-control-message-flag {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.f1-race-control-message-content {
+    flex: 1;
+}
+
+.f1-race-control-message-text {
+    font-size: 13px;
+    color: #ffffff;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.f1-race-control-message-time {
+    font-size: 11px;
+    color: #999999;
+    font-family: 'Courier New', monospace;
+}
+
+.f1-race-control-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666666;
+    font-size: 14px;
+}
+
+/* Latest message highlight */
+.f1-race-control-message:first-child {
+    background: #2a2a2a;
+    border-left-width: 4px;
+}
+
+/* Scrollbar */
+.f1-race-control-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.f1-race-control-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.f1-race-control-content::-webkit-scrollbar-thumb {
+    background: #fbbf24;
+    border-radius: 4px;
+}
