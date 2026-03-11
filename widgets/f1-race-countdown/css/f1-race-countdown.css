@@ -1,0 +1,113 @@
+/* ioBroker.f1 - Race Countdown Widget Styles */
+
+.f1-countdown-widget {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.f1-countdown-header {
+    background: #242424;
+    padding: 12px 16px;
+    border-bottom: 2px solid #9D4EDD;
+}
+
+.f1-countdown-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.f1-countdown-content {
+    padding: 20px;
+}
+
+.f1-countdown-circuit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.f1-countdown-flag {
+    font-size: 32px;
+}
+
+.f1-countdown-circuit-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.f1-countdown-location {
+    margin-bottom: 24px;
+    padding-left: 44px;
+}
+
+.f1-countdown-location-text {
+    font-size: 14px;
+    color: #999999;
+}
+
+.f1-countdown-timer {
+    text-align: center;
+    margin: 32px 0;
+    padding: 24px;
+    background: #242424;
+    border-radius: 8px;
+}
+
+.f1-countdown-days {
+    display: block;
+    font-size: 56px;
+    font-weight: 700;
+    color: #9D4EDD;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.f1-countdown-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #999999;
+    text-transform: uppercase;
+}
+
+.f1-countdown-date {
+    text-align: center;
+    margin-top: 16px;
+}
+
+.f1-countdown-date-text {
+    font-size: 14px;
+    color: #999999;
+}
+
+/* Hover effect */
+.f1-countdown-widget:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+    .f1-countdown-circuit-name {
+        font-size: 20px;
+    }
+    
+    .f1-countdown-days {
+        font-size: 48px;
+    }
+}
