@@ -149,3 +149,12 @@
         <div class="f1-laptimes-content"><div class="f1-laptimes-empty">Loading...</div></div>
     </div>
 </script>
+
+<script type="text/javascript" src="widgets/f1-championship-drivers/js/f1-championship-drivers.js"></script>
+<link rel="stylesheet" href="widgets/f1-championship-drivers/css/f1-championship-drivers.css">
+<script id="tplF1ChampionshipDrivers" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Drivers Championship" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏆</div>' data-vis-attrs="">
+    <div class="vis-widget f1-championship-drivers-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createChampionshipDriversWidget(el, view, data, style) %>>
+        <div class="f1-championship-drivers-header"><span class="f1-championship-drivers-title">DRIVERS CHAMPIONSHIP</span></div>
+        <div class="f1-championship-drivers-content"><div class="f1-championship-drivers-empty">Loading...</div></div>
+    </div>
+</script>
