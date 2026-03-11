@@ -60,3 +60,28 @@
         </div>
     </div>
 </script>
+
+<!--
+    ioBroker.f1 - Session Info Widget
+    VIS1 Widget for displaying live session info, weather, and race control
+-->
+<script type="text/javascript" src="widgets/f1-session-info/js/f1-session-info.js"></script>
+<link rel="stylesheet" href="widgets/f1-session-info/css/f1-session-info.css">
+
+<script id="tplF1SessionInfo"
+        type="text/ejs"
+        class="vis-tpl"
+        data-vis-set="f1"
+        data-vis-type="static"
+        data-vis-name="F1 Session Info"
+        data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;"><div style="color:#9D4EDD;font-weight:bold;font-size:10px;letter-spacing:2px;">SESSION</div><div style="font-size:24px;margin:4px 0;">🏆</div><div style="color:#10b981;font-size:9px;padding:2px 6px;border-radius:3px;background:#242424;">ACTIVE</div></div>'
+        data-vis-attrs="">
+    <div class="vis-widget f1-session-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:350px;height:500px;" <%= (el) -> vis.binds["f1"].createSessionWidget(el, view, data, style) %>>
+        <div class="f1-session-header">
+            <span class="f1-session-title">SESSION INFO</span>
+        </div>
+        <div class="f1-session-content">
+            <div class="f1-session-empty">Waiting for session data...</div>
+        </div>
+    </div>
+</script>
