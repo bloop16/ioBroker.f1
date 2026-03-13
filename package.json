@@ -53,6 +53,7 @@
   "files": [
     "admin/",
     "build/",
+    "widgets/",
     "io-package.json",
     "LICENSE"
   ],
@@ -62,6 +63,7 @@
     "clean": "rimraf build",
     "lint": "eslint --ext .ts src/",
     "test": "mocha test/package.js",
-    "release": "release-script"
+    "release": "release-script",
+    "upload:widgets": "cp -r widgets/. .dev-server/default/node_modules/iobroker.vis/www/widgets/ && cp -r widgets/. .dev-server/default/iobroker-data/files/vis/widgets/"
   }
 }

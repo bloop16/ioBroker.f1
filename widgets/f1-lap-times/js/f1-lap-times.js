@@ -1,4 +1,9 @@
+vis.binds["f1"] = vis.binds["f1"] || {};
+
 vis.binds["f1"].createLapTimesWidget = function (el, view, data, style) {
+    if (typeof vis.binds["f1"]._applyStyle === "function") {
+        vis.binds["f1"]._applyStyle(el, data, "#3b82f6");
+    }
     var $div = $(el);
     var widgetID = el.id;
 
@@ -7,11 +12,17 @@ vis.binds["f1"].createLapTimesWidget = function (el, view, data, style) {
 
     var driverMap = {};
 
-    function formatTime(ms) {
-        if (!ms) return "--";
-        var mins = Math.floor(ms / 60000);
-        var secs = ((ms % 60000) / 1000).toFixed(3);
-        return mins + ":" + (secs < 10 ? "0" : "") + secs;
+    if (!vis.conn || typeof vis.conn.getStates !== "function") {
+        return;
+    }
+
+    // OpenF1 lap times are in seconds (not milliseconds)
+    function formatTime(s) {
+        if (s == null || s <= 0) return "--";
+        var mins = Math.floor(s / 60);
+        var secs = (s % 60).toFixed(3);
+        if (parseFloat(secs) < 10) secs = "0" + secs;
+        return mins + ":" + secs;
     }
 
     function applyLaps(laps) {
@@ -83,10 +94,14 @@ vis.binds["f1"].createLapTimesWidget = function (el, view, data, style) {
 
     loadDrivers();
 
-    vis.conn.subscribe([oidLaps]);
-    vis.conn._socket.on("stateChange", function (id, state) {
-        if (id === oidLaps && $("#" + widgetID).length) {
-            loadDrivers();
-        }
-    });
+    if (typeof vis.conn.subscribe === "function") {
+        vis.conn.subscribe([oidLaps]);
+    }
+    if (vis.conn._socket && typeof vis.conn._socket.on === "function") {
+        vis.conn._socket.on("stateChange", function (id, state) {
+            if (id === oidLaps && $("#" + widgetID).length) {
+                loadDrivers();
+            }
+        });
+    }
 };

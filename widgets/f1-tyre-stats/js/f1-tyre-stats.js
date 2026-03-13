@@ -3,7 +3,12 @@
     Part of vis.binds["f1"]
 */
 
+vis.binds["f1"] = vis.binds["f1"] || {};
+
 vis.binds["f1"].createTyreWidget = function (el, view, data, style) {
+    if (typeof vis.binds["f1"]._applyStyle === "function") {
+        vis.binds["f1"]._applyStyle(el, data, "#9D4EDD");
+    }
     var $div = $(el);
     var widgetID = el.id;
 
@@ -13,6 +18,10 @@ vis.binds["f1"].createTyreWidget = function (el, view, data, style) {
 
     var driverMap = {};
     var currentTyres = {};
+
+    if (!vis.conn || typeof vis.conn.getStates !== "function") {
+        return;
+    }
 
     function applyData() {
         var $content = $div.find(".f1-tyre-content");
@@ -148,10 +157,14 @@ vis.binds["f1"].createTyreWidget = function (el, view, data, style) {
     loadDrivers();
 
     // Subscribe
-    vis.conn.subscribe([oidStints, oidCurrent]);
-    vis.conn._socket.on("stateChange", function (id, state) {
-        if ((id === oidStints || id === oidCurrent) && $("#" + widgetID).length) {
-            loadDrivers(); // Reload everything
-        }
-    });
+    if (typeof vis.conn.subscribe === "function") {
+        vis.conn.subscribe([oidStints, oidCurrent]);
+    }
+    if (vis.conn._socket && typeof vis.conn._socket.on === "function") {
+        vis.conn._socket.on("stateChange", function (id, state) {
+            if ((id === oidStints || id === oidCurrent) && $("#" + widgetID).length) {
+                loadDrivers(); // Reload everything
+            }
+        });
+    }
 };

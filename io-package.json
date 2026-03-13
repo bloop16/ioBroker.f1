@@ -53,7 +53,8 @@
       {
         "admin": ">=7.0.0"
       }
-    ]
+    ],
+    "restartAdapters": ["vis"]
   },
   "native": {
     "favoriteDriver": "",

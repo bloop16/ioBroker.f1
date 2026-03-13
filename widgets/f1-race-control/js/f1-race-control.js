@@ -3,11 +3,20 @@
     Part of vis.binds["f1"]
 */
 
+vis.binds["f1"] = vis.binds["f1"] || {};
+
 vis.binds["f1"].createRaceControlWidget = function (el, view, data, style) {
+    if (typeof vis.binds["f1"]._applyStyle === "function") {
+        vis.binds["f1"]._applyStyle(el, data, "#fbbf24");
+    }
     var $div = $(el);
     var widgetID = el.id;
 
     var oidMessages = "f1.0.race_control.messages";
+
+    if (!vis.conn || typeof vis.conn.getStates !== "function") {
+        return;
+    }
 
     var flagEmojis = {
         "green": "🟢",
@@ -104,17 +113,21 @@ vis.binds["f1"].createRaceControlWidget = function (el, view, data, style) {
 
     loadMessages();
 
-    vis.conn.subscribe([oidMessages]);
-    vis.conn._socket.on("stateChange", function (id, state) {
-        if (id === oidMessages && $("#" + widgetID).length) {
-            try {
-                var messages = state && state.val
-                    ? (typeof state.val === "string" ? JSON.parse(state.val) : state.val)
-                    : null;
-                applyMessages(messages);
-            } catch (e) {
-                console.error("F1 Race Control: update error", e);
+    if (typeof vis.conn.subscribe === "function") {
+        vis.conn.subscribe([oidMessages]);
+    }
+    if (vis.conn._socket && typeof vis.conn._socket.on === "function") {
+        vis.conn._socket.on("stateChange", function (id, state) {
+            if (id === oidMessages && $("#" + widgetID).length) {
+                try {
+                    var messages = state && state.val
+                        ? (typeof state.val === "string" ? JSON.parse(state.val) : state.val)
+                        : null;
+                    applyMessages(messages);
+                } catch (e) {
+                    console.error("F1 Race Control: update error", e);
+                }
             }
-        }
-    });
+        });
+    }
 };

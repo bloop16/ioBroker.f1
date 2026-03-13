@@ -1,21 +1,26 @@
 /* ioBroker.f1 - Live Standings Widget */
 
 .f1-standings-widget {
-    background: #1a1a1a;
-    border-radius: 8px;
+    background: var(--f1-bg, #1a1a1a);
+    border-radius: var(--f1-radius, 8px);
     padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: var(--f1-font-size, 14px);
     color: #ffffff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     overflow: hidden;
-    min-width: 350px;
-    max-width: 500px;
+    width: 400px;
+    height: 500px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 .f1-standings-header {
-    background: #242424;
+    background: var(--f1-header-bg, #242424);
     padding: 12px 16px;
-    border-bottom: 2px solid #9D4EDD;
+    border-bottom: 2px solid var(--f1-accent, #9D4EDD);
+    flex-shrink: 0;
 }
 
 .f1-standings-title {
@@ -28,7 +33,7 @@
 
 .f1-standings-content {
     padding: 12px;
-    max-height: 500px;
+    flex: 1;
     overflow-y: auto;
 }
 

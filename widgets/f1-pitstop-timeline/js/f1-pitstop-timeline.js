@@ -1,4 +1,9 @@
+vis.binds["f1"] = vis.binds["f1"] || {};
+
 vis.binds["f1"].createPitstopWidget = function (el, view, data, style) {
+    if (typeof vis.binds["f1"]._applyStyle === "function") {
+        vis.binds["f1"]._applyStyle(el, data, "#ff8700");
+    }
     var $div = $(el);
     var widgetID = el.id;
 
@@ -6,6 +11,10 @@ vis.binds["f1"].createPitstopWidget = function (el, view, data, style) {
     var oidDrivers = "f1.0.standings.drivers";
 
     var driverMap = {};
+
+    if (!vis.conn || typeof vis.conn.getStates !== "function") {
+        return;
+    }
 
     function applyPitstops(pitstops) {
         var $content = $div.find(".f1-pitstop-content");
@@ -24,7 +33,7 @@ vis.binds["f1"].createPitstopWidget = function (el, view, data, style) {
             var driver = driverMap[stop.driver_number] || {};
             var teamColor = driver.team_colour ? "#" + driver.team_colour : "#666666";
             var driverName = driver.name_acronym || "#" + stop.driver_number;
-            var duration = stop.pit_duration ? (stop.pit_duration / 1000).toFixed(1) + "s" : "--";
+            var duration = stop.pit_duration ? (+stop.pit_duration).toFixed(1) + "s" : "--";
 
             var $row = $('<div class="f1-pitstop-row"></div>');
             $row.append('<div class="f1-pitstop-team-bar" style="background:' + teamColor + '"></div>');
@@ -73,10 +82,14 @@ vis.binds["f1"].createPitstopWidget = function (el, view, data, style) {
 
     loadDrivers();
 
-    vis.conn.subscribe([oidPitstops]);
-    vis.conn._socket.on("stateChange", function (id, state) {
-        if (id === oidPitstops && $("#" + widgetID).length) {
-            loadDrivers();
-        }
-    });
+    if (typeof vis.conn.subscribe === "function") {
+        vis.conn.subscribe([oidPitstops]);
+    }
+    if (vis.conn._socket && typeof vis.conn._socket.on === "function") {
+        vis.conn._socket.on("stateChange", function (id, state) {
+            if (id === oidPitstops && $("#" + widgetID).length) {
+                loadDrivers();
+            }
+        });
+    }
 };

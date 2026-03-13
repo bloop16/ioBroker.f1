@@ -12,7 +12,7 @@
         data-vis-type="static"
         data-vis-name="F1 Race Countdown"
         data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;"><div style="color:#9D4EDD;font-weight:bold;font-size:10px;letter-spacing:2px;">NEXT RACE</div><div style="color:#fff;font-size:18px;font-weight:bold;margin:4px 0;font-family:Teko,Arial Narrow,Bahnschrift,sans-serif;">42</div><div style="color:#aaa;font-size:8px;letter-spacing:1px;">DAYS TO GO</div></div>'
-        data-vis-attrs="">
+        data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-countdown-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:300px;height:350px;" <%= (el) -> vis.binds["f1"].createWidget(el, view, data, style) %>>
         <div class="f1-countdown-header">
             <span class="f1-countdown-title">NEXT RACE</span>
@@ -50,7 +50,7 @@
         data-vis-type="static"
         data-vis-name="F1 Live Standings"
         data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;"><div style="color:#9D4EDD;font-weight:bold;font-size:10px;letter-spacing:2px;">STANDINGS</div><div style="display:flex;gap:4px;margin-top:4px;"><div style="width:3px;height:20px;background:#6692FF;border-radius:1px;"></div><div style="width:3px;height:20px;background:#00D2BE;border-radius:1px;"></div><div style="width:3px;height:20px;background:#DC0000;border-radius:1px;"></div></div></div>'
-        data-vis-attrs="">
+        data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-standings-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createStandingsWidget(el, view, data, style) %>>
         <div class="f1-standings-header">
             <span class="f1-standings-title">LIVE STANDINGS</span>
@@ -75,7 +75,7 @@
         data-vis-type="static"
         data-vis-name="F1 Session Info"
         data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;"><div style="color:#9D4EDD;font-weight:bold;font-size:10px;letter-spacing:2px;">SESSION</div><div style="font-size:24px;margin:4px 0;">🏆</div><div style="color:#10b981;font-size:9px;padding:2px 6px;border-radius:3px;background:#242424;">ACTIVE</div></div>'
-        data-vis-attrs="">
+        data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-session-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:350px;height:500px;" <%= (el) -> vis.binds["f1"].createSessionWidget(el, view, data, style) %>>
         <div class="f1-session-header">
             <span class="f1-session-title">SESSION INFO</span>
@@ -100,7 +100,7 @@
         data-vis-type="static"
         data-vis-name="F1 Race Control"
         data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Titillium Web,Arial Narrow,Bahnschrift,sans-serif;gap:4px;"><div style="font-size:20px;">🚨</div><div style="color:#fbbf24;font-weight:bold;font-size:9px;letter-spacing:2px;">RACE CONTROL</div></div>'
-        data-vis-attrs="">
+        data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-race-control-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:400px;" <%= (el) -> vis.binds["f1"].createRaceControlWidget(el, view, data, style) %>>
         <div class="f1-race-control-header">
             <span class="f1-race-control-icon">🚨</span>
@@ -125,7 +125,7 @@
         data-vis-type="static"
         data-vis-name="F1 Tyre Stats"
         data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;gap:4px;"><div style="font-size:20px;">🏎️</div><div style="display:flex;gap:3px;"><div style="width:20px;height:12px;background:#ff0000;border-radius:2px;"></div><div style="width:20px;height:12px;background:#ffff00;border-radius:2px;"></div><div style="width:20px;height:12px;background:#fff;border-radius:2px;"></div></div></div>'
-        data-vis-attrs="">
+        data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-tyre-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createTyreWidget(el, view, data, style) %>>
         <div class="f1-tyre-header"><span class="f1-tyre-icon">🏎️</span><span class="f1-tyre-title">TYRE STATS</span></div>
         <div class="f1-tyre-content"><div class="f1-tyre-empty">Loading...</div></div>
@@ -134,7 +134,7 @@
 
 <script type="text/javascript" src="widgets/f1-pitstop-timeline/js/f1-pitstop-timeline.js"></script>
 <link rel="stylesheet" href="widgets/f1-pitstop-timeline/css/f1-pitstop-timeline.css">
-<script id="tplF1Pitstop" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Pit Stops" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🔧</div>' data-vis-attrs="">
+<script id="tplF1Pitstop" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Pit Stops" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🔧</div>' data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-pitstop-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:400px;" <%= (el) -> vis.binds["f1"].createPitstopWidget(el, view, data, style) %>>
         <div class="f1-pitstop-header"><span class="f1-pitstop-title">PIT STOPS</span></div>
         <div class="f1-pitstop-content"><div class="f1-pitstop-empty">Loading...</div></div>
@@ -143,7 +143,7 @@
 
 <script type="text/javascript" src="widgets/f1-lap-times/js/f1-lap-times.js"></script>
 <link rel="stylesheet" href="widgets/f1-lap-times/css/f1-lap-times.css">
-<script id="tplF1LapTimes" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Lap Times" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">⏱️</div>' data-vis-attrs="">
+<script id="tplF1LapTimes" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Lap Times" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">⏱️</div>' data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-laptimes-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:450px;height:500px;" <%= (el) -> vis.binds["f1"].createLapTimesWidget(el, view, data, style) %>>
         <div class="f1-laptimes-header"><span class="f1-laptimes-title">FASTEST LAPS</span></div>
         <div class="f1-laptimes-content"><div class="f1-laptimes-empty">Loading...</div></div>
@@ -152,7 +152,7 @@
 
 <script type="text/javascript" src="widgets/f1-championship-drivers/js/f1-championship-drivers.js"></script>
 <link rel="stylesheet" href="widgets/f1-championship-drivers/css/f1-championship-drivers.css">
-<script id="tplF1ChampionshipDrivers" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Drivers Championship" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏆</div>' data-vis-attrs="">
+<script id="tplF1ChampionshipDrivers" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Drivers Championship" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏆</div>' data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-championship-drivers-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createChampionshipDriversWidget(el, view, data, style) %>>
         <div class="f1-championship-drivers-header"><span class="f1-championship-drivers-title">DRIVERS CHAMPIONSHIP</span></div>
         <div class="f1-championship-drivers-content"><div class="f1-championship-drivers-empty">Loading...</div></div>
@@ -161,7 +161,7 @@
 
 <script type="text/javascript" src="widgets/f1-championship-teams/js/f1-championship-teams.js"></script>
 <link rel="stylesheet" href="widgets/f1-championship-teams/css/f1-championship-teams.css">
-<script id="tplF1ChampionshipTeams" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Constructors Championship" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏅</div>' data-vis-attrs="">
+<script id="tplF1ChampionshipTeams" type="text/ejs" class="vis-tpl" data-vis-set="f1" data-vis-type="static" data-vis-name="F1 Constructors Championship" data-vis-prev='<div style="width:120px;height:80px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏅</div>' data-vis-attrs="accentColor/color;bgColor/color;headerBgColor/color;borderRadius/number;fontSize/number">
     <div class="vis-widget f1-championship-teams-widget <%== this.data.attr('class') %>" id="<%= this.data.attr('wid') %>" style="width:400px;height:500px;" <%= (el) -> vis.binds["f1"].createChampionshipTeamsWidget(el, view, data, style) %>>
         <div class="f1-championship-teams-header"><span class="f1-championship-teams-title">CONSTRUCTORS CHAMPIONSHIP</span></div>
         <div class="f1-championship-teams-content"><div class="f1-championship-teams-empty">Loading...</div></div>
