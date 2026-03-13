@@ -123,6 +123,76 @@ interface Location {
 	z: number;
 }
 
+interface ChampionshipDriver {
+	driver_number: number;
+	meeting_key: number;
+	points_current: number;
+	points_start: number;
+	position_current: number;
+	position_start: number;
+	session_key: number;
+}
+
+interface ChampionshipTeam {
+	meeting_key: number;
+	points_current: number;
+	points_start: number;
+	position_current: number;
+	position_start: number;
+	session_key: number;
+	team_name: string;
+}
+
+interface Meeting {
+	circuit_key: number;
+	circuit_image: string;
+	circuit_info_url: string;
+	circuit_short_name: string;
+	circuit_type: string;
+	country_code: string;
+	country_flag: string;
+	country_key: number;
+	country_name: string;
+	date_end: string;
+	date_start: string;
+	gmt_offset: string;
+	location: string;
+	meeting_key: number;
+	meeting_name: string;
+	meeting_official_name: string;
+	year: number;
+}
+
+interface Overtake {
+	date: string;
+	meeting_key: number;
+	overtaken_driver_number: number;
+	overtaking_driver_number: number;
+	position: number;
+	session_key: number;
+}
+
+interface SessionResult {
+	dnf: boolean;
+	dns: boolean;
+	dsq: boolean;
+	driver_number: number;
+	duration: number;
+	gap_to_leader: number;
+	number_of_laps: number;
+	meeting_key: number;
+	position: number;
+	session_key: number;
+}
+
+interface StartingGrid {
+	driver_number: number;
+	lap_duration: number;
+	meeting_key: number;
+	position: number;
+	session_key: number;
+}
+
 class F1 extends utils.Adapter {
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
@@ -532,6 +602,79 @@ class F1 extends utils.Adapter {
 				native: {},
 			});
 		}
+
+		// Meetings
+		await this.setObjectNotExistsAsync("meetings", {
+			type: "channel",
+			common: { name: "Race Meetings" },
+			native: {},
+		});
+
+		for (const state of [
+			{ id: "current", name: "Current Meeting", type: "string", role: "json" },
+			{ id: "all", name: "All Meetings (Year)", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+		]) {
+			await this.setObjectNotExistsAsync(`meetings.${state.id}`, {
+				type: "state",
+				common: { name: state.name, type: "string", role: state.role, read: true, write: false },
+				native: {},
+			});
+		}
+
+		// Overtakes
+		await this.setObjectNotExistsAsync("overtakes", {
+			type: "channel",
+			common: { name: "Overtakes" },
+			native: {},
+		});
+
+		for (const state of [
+			{ id: "all", name: "All Overtakes", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+		]) {
+			await this.setObjectNotExistsAsync(`overtakes.${state.id}`, {
+				type: "state",
+				common: { name: state.name, type: "string", role: state.role, read: true, write: false },
+				native: {},
+			});
+		}
+
+		// Session Result
+		await this.setObjectNotExistsAsync("session_result", {
+			type: "channel",
+			common: { name: "Session Results" },
+			native: {},
+		});
+
+		for (const state of [
+			{ id: "current", name: "Session Result", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+		]) {
+			await this.setObjectNotExistsAsync(`session_result.${state.id}`, {
+				type: "state",
+				common: { name: state.name, type: "string", role: state.role, read: true, write: false },
+				native: {},
+			});
+		}
+
+		// Starting Grid
+		await this.setObjectNotExistsAsync("starting_grid", {
+			type: "channel",
+			common: { name: "Starting Grid" },
+			native: {},
+		});
+
+		for (const state of [
+			{ id: "current", name: "Starting Grid", type: "string", role: "json" },
+			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+		]) {
+			await this.setObjectNotExistsAsync(`starting_grid.${state.id}`, {
+				type: "state",
+				common: { name: state.name, type: "string", role: state.role, read: true, write: false },
+				native: {},
+			});
+		}
 	}
 
 	private async fetchData(): Promise<void> {
@@ -555,6 +698,7 @@ class F1 extends utils.Adapter {
 			}
 
 			await this.updateStandings();
+			await this.updateMeetings();
 
 			if (this.currentSessionKey) {
 				await this.updateLiveSession();
@@ -566,6 +710,9 @@ class F1 extends utils.Adapter {
 				await this.updateRadio();
 				await this.updateCarData();
 				await this.updateLocation();
+				await this.updateOvertakes();
+				await this.updateSessionResult();
+				await this.updateStartingGrid();
 			} else {
 				await this.setStateAsync("live_session.status", { val: "no_session", ack: true });
 			}
@@ -620,39 +767,139 @@ class F1 extends utils.Adapter {
 
 	private async updateStandings(): Promise<void> {
 		try {
-			const response = await this.api.get<Driver[]>("/drivers", {
-				params: { session_key: "latest" },
+			const [champDriversRes, champTeamsRes, driversRes] = await Promise.all([
+				this.api.get<ChampionshipDriver[]>("/championship_drivers", { params: { session_key: "latest" } }),
+				this.api.get<ChampionshipTeam[]>("/championship_teams", { params: { session_key: "latest" } }),
+				this.api.get<Driver[]>("/drivers", { params: { session_key: "latest" } }),
+			]);
+
+			if (champDriversRes.data && champDriversRes.data.length > 0) {
+				// Merge championship points with driver info (name, team, colour)
+				const driverMap = new Map(driversRes.data.map((d: Driver) => [d.driver_number, d]));
+				const merged = champDriversRes.data
+					.map((cd: ChampionshipDriver) => {
+						const info = driverMap.get(cd.driver_number);
+						return {
+							position: cd.position_current,
+							driver_number: cd.driver_number,
+							full_name: info?.full_name ?? "",
+							name_acronym: info?.name_acronym ?? "",
+							team_name: info?.team_name ?? "",
+							team_colour: info?.team_colour ?? "",
+							headshot_url: info?.headshot_url ?? "",
+							points: cd.points_current,
+						};
+					})
+					.sort((a, b) => a.position - b.position);
+
+				await this.setStateAsync("standings.drivers", { val: JSON.stringify(merged, null, 2), ack: true });
+			}
+
+			if (champTeamsRes.data && champTeamsRes.data.length > 0) {
+				const teams = champTeamsRes.data
+					.map((ct: ChampionshipTeam) => ({
+						position: ct.position_current,
+						team_name: ct.team_name,
+						points: ct.points_current,
+					}))
+					.sort((a, b) => a.position - b.position);
+
+				await this.setStateAsync("standings.teams", { val: JSON.stringify(teams, null, 2), ack: true });
+			}
+
+			await this.setStateAsync("standings.last_update", { val: new Date().toISOString(), ack: true });
+			this.log.debug("Updated standings");
+		} catch {
+			this.log.error("Failed to update standings");
+		}
+	}
+
+	private async updateMeetings(): Promise<void> {
+		try {
+			const year = new Date().getFullYear();
+			const response = await this.api.get<Meeting[]>("/meetings", { params: { year } });
+
+			if (response.data && response.data.length > 0) {
+				const sorted = response.data.sort(
+					(a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
+				);
+
+				const now = new Date();
+				const current =
+					sorted.find(m => new Date(m.date_start) <= now && new Date(m.date_end) >= now) ??
+					sorted.filter(m => new Date(m.date_end) < now).pop() ??
+					sorted[0];
+
+				await this.setStateAsync("meetings.current", { val: JSON.stringify(current, null, 2), ack: true });
+				await this.setStateAsync("meetings.all", { val: JSON.stringify(sorted, null, 2), ack: true });
+				await this.setStateAsync("meetings.last_update", { val: new Date().toISOString(), ack: true });
+				this.log.debug("Updated meetings");
+			}
+		} catch {
+			this.log.debug("Failed to update meetings");
+		}
+	}
+
+	private async updateOvertakes(): Promise<void> {
+		if (!this.currentSessionKey) {
+			return;
+		}
+
+		try {
+			const response = await this.api.get<Overtake[]>("/overtakes", {
+				params: { session_key: this.currentSessionKey },
 			});
 
 			if (response.data && response.data.length > 0) {
-				const drivers = response.data.sort((a: Driver, b: Driver) => {
-					if (a.team_name === b.team_name) {
-						return a.driver_number - b.driver_number;
-					}
-					return a.team_name.localeCompare(b.team_name);
-				});
-
-				const teams = Array.from(
-					new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }])).values(),
-				);
-
-				await this.setStateAsync("standings.drivers", {
-					val: JSON.stringify(drivers, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("standings.teams", {
-					val: JSON.stringify(teams, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("standings.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated standings");
+				const sorted = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+				await this.setStateAsync("overtakes.all", { val: JSON.stringify(sorted, null, 2), ack: true });
+				await this.setStateAsync("overtakes.last_update", { val: new Date().toISOString(), ack: true });
+				this.log.debug("Updated overtakes");
 			}
 		} catch {
-			this.log.error("Failed to update standings");
+			this.log.debug("Failed to update overtakes");
+		}
+	}
+
+	private async updateSessionResult(): Promise<void> {
+		if (!this.currentSessionKey) {
+			return;
+		}
+
+		try {
+			const response = await this.api.get<SessionResult[]>("/session_result", {
+				params: { session_key: this.currentSessionKey },
+			});
+
+			if (response.data && response.data.length > 0) {
+				const sorted = response.data.sort((a, b) => a.position - b.position);
+				await this.setStateAsync("session_result.current", { val: JSON.stringify(sorted, null, 2), ack: true });
+				await this.setStateAsync("session_result.last_update", { val: new Date().toISOString(), ack: true });
+				this.log.debug("Updated session result");
+			}
+		} catch {
+			this.log.debug("Failed to update session result");
+		}
+	}
+
+	private async updateStartingGrid(): Promise<void> {
+		if (!this.currentSessionKey) {
+			return;
+		}
+
+		try {
+			const response = await this.api.get<StartingGrid[]>("/starting_grid", {
+				params: { session_key: this.currentSessionKey },
+			});
+
+			if (response.data && response.data.length > 0) {
+				const sorted = response.data.sort((a, b) => a.position - b.position);
+				await this.setStateAsync("starting_grid.current", { val: JSON.stringify(sorted, null, 2), ack: true });
+				await this.setStateAsync("starting_grid.last_update", { val: new Date().toISOString(), ack: true });
+				this.log.debug("Updated starting grid");
+			}
+		} catch {
+			this.log.debug("Failed to update starting grid");
 		}
 	}
 
