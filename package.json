@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.2",
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^5.0.0",
@@ -39,6 +40,7 @@
     "@iobroker/testing": "^5.0.0",
     "@tsconfig/node20": "^20.1.9",
     "@types/axios": "^0.9.36",
+    "@types/ws": "^8.0.0",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",

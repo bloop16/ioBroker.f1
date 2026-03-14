@@ -14,8 +14,8 @@
       "de": "Formel 1"
     },
     "desc": {
-      "en": "Unofficial Formula 1 live data adapter using OpenF1 API. Not affiliated with Formula One.",
-      "de": "Formel-1-Live-Daten-Integration - Renninformationen, Wertungen und Live-Session-Tracking"
+      "en": "Unofficial Formula 1 live data adapter. Race calendar, standings, and live session data via SignalR. Not affiliated with Formula One.",
+      "de": "Inoffizieller Formel-1-Adapter. Rennkalender, Wertungen und Live-Session-Daten via SignalR."
     },
     "authors": [
       "Martin (bloop) <bloop16@hotmail.com>"
@@ -40,7 +40,7 @@
     "type": "misc-data",
     "compact": true,
     "connectionType": "cloud",
-    "dataSource": "poll",
+    "dataSource": "push",
     "adminUI": {
       "config": "json"
     },
@@ -60,9 +60,7 @@
     "favoriteDriver": "",
     "favoriteTeam": "",
     "highlightColor": "#3bb273",
-    "updateIntervalNormal": 3600,
-    "updateIntervalRace": 10,
-    "enableDynamicPolling": true
+    "updateIntervalNormal": 3600
   },
   "objects": [],
   "instanceObjects": [
