@@ -61,7 +61,6 @@
     "watch": "tsc -p tsconfig.build.json --watch",
     "clean": "rimraf build",
     "lint": "eslint --ext .ts src/",
-    "test": "mocha test/package.js",
     "release": "release-script"
   }
 }

@@ -1111,7 +1111,7 @@ class F1 extends utils.Adapter {
 	/**
 	 * Update next_session states
 	 *
-	 * @param session
+	 * @param session - Next session data
 	 */
 	private async updateNextSession(session: NextRace | null): Promise<void> {
 		if (session) {
@@ -1140,7 +1140,7 @@ class F1 extends utils.Adapter {
 	/**
 	 * Update weekend_sessions states
 	 *
-	 * @param weekend
+	 * @param weekend - Weekend sessions data
 	 */
 	private async updateWeekendSessions(weekend: WeekendSessions | null): Promise<void> {
 		if (weekend) {
