@@ -36,6 +36,7 @@
     "extIcon": "https://raw.githubusercontent.com/bloop16/ioBroker.f1/main/admin/f1.png",
     "readme": "https://github.com/bloop16/ioBroker.f1/blob/main/README.md",
     "loglevel": "info",
+    "tier": 2,
     "mode": "daemon",
     "type": "misc-data",
     "compact": true,
