@@ -124,6 +124,8 @@ interface Location {
 }
 
 class F1 extends utils.Adapter {
+	private readonly ERGAST_DRIVER_STANDINGS_URL = "https://api.jolpi.ca/ergast/f1/current/driverstandings.json?limit=100";
+	private readonly ERGAST_CONSTRUCTOR_STANDINGS_URL = "https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
 	private currentPollingMode: "race" | "normal" = "normal";
@@ -620,42 +622,80 @@ class F1 extends utils.Adapter {
 
 	private async updateStandings(): Promise<void> {
 		try {
-			const response = await this.api.get<Driver[]>("/drivers", {
-				params: { session_key: "latest" },
-			});
+			// Fetch driver standings from Ergast API
+			const driverResponse: any = await axios.get(this.ERGAST_DRIVER_STANDINGS_URL);
+			const driverStandings =
+				driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
 
-			if (response.data && response.data.length > 0) {
-				const drivers = response.data.sort((a: Driver, b: Driver) => {
-					if (a.team_name === b.team_name) {
-						return a.driver_number - b.driver_number;
-					}
-					return a.team_name.localeCompare(b.team_name);
-				});
+			// Fetch constructor standings from Ergast API
+			const constructorResponse: any = await axios.get(this.ERGAST_CONSTRUCTOR_STANDINGS_URL);
+			const constructorStandings =
+				constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
 
-				const teams = Array.from(
-					new Map(drivers.map(d => [d.team_name, { name: d.team_name, colour: d.team_colour }])).values(),
-				);
+			if (driverStandings.length > 0) {
+				// Transform Ergast data to our format
+				const drivers = driverStandings.map((standing: any) => ({
+					position: parseInt(standing.position),
+					driver_number: parseInt(standing.Driver.permanentNumber),
+					full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
+					name_acronym: standing.Driver.code,
+					team_name: standing.Constructors[0]?.name || "Unknown",
+					team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
+					headshot_url: "",
+					points: parseInt(standing.points),
+					wins: parseInt(standing.wins),
+				}));
 
 				await this.setStateAsync("standings.drivers", {
 					val: JSON.stringify(drivers, null, 2),
 					ack: true,
 				});
+			}
+
+			if (constructorStandings.length > 0) {
+				// Transform constructor data
+				const teams = constructorStandings.map((standing: any) => ({
+					position: parseInt(standing.position),
+					team_name: standing.Constructor.name,
+					points: parseInt(standing.points),
+					wins: parseInt(standing.wins),
+				}));
+
 				await this.setStateAsync("standings.teams", {
 					val: JSON.stringify(teams, null, 2),
 					ack: true,
 				});
-				await this.setStateAsync("standings.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated standings");
 			}
-		} catch {
-			this.log.error("Failed to update standings");
+
+			await this.setStateAsync("standings.last_update", {
+				val: new Date().toISOString(),
+				ack: true,
+			});
+
+			this.log.debug("Updated standings from Ergast API");
+		} catch (error) {
+			this.log.error(`Failed to update standings: ${error}`);
 		}
 	}
 
+	private getTeamColour(constructorId: string): string {
+		const colours: Record<string, string> = {
+			mercedes: "00D2BE",
+			ferrari: "E8002D",
+			red_bull: "3671C6",
+			mclaren: "FF8000",
+			alpine: "0093CC",
+			aston_martin: "229971",
+			haas: "B6BABD",
+			alphatauri: "6692FF",
+			rb: "6692FF",
+			williams: "64C4FF",
+			sauber: "FF0000",
+			audi: "FF0000",
+			kick_sauber: "FF0000",
+		};
+		return colours[constructorId] || "FFFFFF";
+	}
 	private async updateLiveSession(): Promise<void> {
 		if (!this.currentSessionKey) {
 			return;
