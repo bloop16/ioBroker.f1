@@ -483,18 +483,33 @@ class F1 extends utils.Adapter {
             const constructorResponse = await axios_1.default.get(this.ERGAST_CONSTRUCTOR_STANDINGS_URL);
             const constructorStandings = constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
             if (driverStandings.length > 0) {
+                // Fetch driver details from OpenF1 for headshot URLs
+                const openF1Response = await this.api.get("/drivers", {
+                    params: { session_key: "latest" },
+                });
+                const openF1Drivers = openF1Response.data || [];
+                // Create lookup map by driver number
+                const headshotMap = new Map();
+                openF1Drivers.forEach((driver) => {
+                    if (driver.headshot_url) {
+                        headshotMap.set(driver.driver_number, driver.headshot_url);
+                    }
+                });
                 // Transform Ergast data to our format
-                const drivers = driverStandings.map((standing) => ({
-                    position: parseInt(standing.position),
-                    driver_number: parseInt(standing.Driver.permanentNumber),
-                    full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
-                    name_acronym: standing.Driver.code,
-                    team_name: standing.Constructors[0]?.name || "Unknown",
-                    team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
-                    headshot_url: "",
-                    points: parseInt(standing.points),
-                    wins: parseInt(standing.wins),
-                }));
+                const drivers = driverStandings.map((standing) => {
+                    const driverNumber = parseInt(standing.Driver.permanentNumber);
+                    return {
+                        position: parseInt(standing.position),
+                        driver_number: driverNumber,
+                        full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
+                        name_acronym: standing.Driver.code,
+                        team_name: standing.Constructors[0]?.name || "Unknown",
+                        team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
+                        headshot_url: headshotMap.get(driverNumber) || "",
+                        points: parseInt(standing.points),
+                        wins: parseInt(standing.wins),
+                    };
+                });
                 await this.setStateAsync("standings.drivers", {
                     val: JSON.stringify(drivers, null, 2),
                     ack: true,
@@ -517,7 +532,7 @@ class F1 extends utils.Adapter {
                 val: new Date().toISOString(),
                 ack: true,
             });
-            this.log.debug("Updated standings from Ergast API");
+            this.log.debug("Updated standings from Ergast API + OpenF1 headshots");
         }
         catch (error) {
             this.log.error(`Failed to update standings: ${error}`);

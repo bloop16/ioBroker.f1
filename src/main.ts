@@ -633,18 +633,35 @@ class F1 extends utils.Adapter {
 				constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
 
 			if (driverStandings.length > 0) {
+				// Fetch driver details from OpenF1 for headshot URLs
+				const openF1Response = await this.api.get<Driver[]>("/drivers", {
+					params: { session_key: "latest" },
+				});
+				const openF1Drivers = openF1Response.data || [];
+
+				// Create lookup map by driver number
+				const headshotMap = new Map<number, string>();
+				openF1Drivers.forEach((driver: Driver) => {
+					if (driver.headshot_url) {
+						headshotMap.set(driver.driver_number, driver.headshot_url);
+					}
+				});
+
 				// Transform Ergast data to our format
-				const drivers = driverStandings.map((standing: any) => ({
-					position: parseInt(standing.position),
-					driver_number: parseInt(standing.Driver.permanentNumber),
-					full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
-					name_acronym: standing.Driver.code,
-					team_name: standing.Constructors[0]?.name || "Unknown",
-					team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
-					headshot_url: "",
-					points: parseInt(standing.points),
-					wins: parseInt(standing.wins),
-				}));
+				const drivers = driverStandings.map((standing: any) => {
+					const driverNumber = parseInt(standing.Driver.permanentNumber);
+					return {
+						position: parseInt(standing.position),
+						driver_number: driverNumber,
+						full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
+						name_acronym: standing.Driver.code,
+						team_name: standing.Constructors[0]?.name || "Unknown",
+						team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
+						headshot_url: headshotMap.get(driverNumber) || "",
+						points: parseInt(standing.points),
+						wins: parseInt(standing.wins),
+					};
+				});
 
 				await this.setStateAsync("standings.drivers", {
 					val: JSON.stringify(drivers, null, 2),
@@ -672,12 +689,11 @@ class F1 extends utils.Adapter {
 				ack: true,
 			});
 
-			this.log.debug("Updated standings from Ergast API");
+			this.log.debug("Updated standings from Ergast API + OpenF1 headshots");
 		} catch (error) {
 			this.log.error(`Failed to update standings: ${error}`);
 		}
 	}
-
 	private getTeamColour(constructorId: string): string {
 		const colours: Record<string, string> = {
 			mercedes: "00D2BE",
