@@ -8,7 +8,6 @@
         "de": "Initiales MVP-Release mit Kalender und Wertungen"
       }
     },
-    "title": "Formula 1",
     "titleLang": {
       "en": "F1 Live Data (Unofficial)",
       "de": "Formel 1"
@@ -28,9 +27,7 @@
       "live data",
       "standings"
     ],
-    "license": "MIT",
     "platform": "Javascript/Node.js",
-    "main": "build/main.js",
     "icon": "f1.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/bloop16/ioBroker.f1/main/admin/f1.png",

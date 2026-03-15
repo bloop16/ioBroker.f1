@@ -1,14 +1,10 @@
 {
   "plugins": [
-    {
-      "name": "npm",
-      "enabled": true,
-      "token": "$NPM_TOKEN"
-    },
-    {
-      "name": "github",
-      "enabled": true,
-      "token": "$GITHUB_TOKEN"
-    }
-  ]
+    "npm",
+    "github",
+    "iobroker"
+  ],
+  "exec": {
+    "before_commit": "npm run build"
+  }
 }
