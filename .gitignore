@@ -32,3 +32,4 @@ package-lock.json
 
 # Claude AI settings (workspace-specific)
 .claude/
+.commitinfo
