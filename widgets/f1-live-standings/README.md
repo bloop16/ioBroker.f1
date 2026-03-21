@@ -19,6 +19,7 @@ Requires these ioBroker states:
 - `f1.0.positions.current` - JSON array with position data
 
 Expected JSON structure:
+
 ```json
 [
   {
@@ -36,9 +37,10 @@ Expected JSON structure:
 ## Installation
 
 1. Copy widget files to VIS:
-   ```
-   /opt/iobroker/iobroker-data/files/vis.0/widgets/f1-live-standings/
-   ```
+
+    ```
+    /opt/iobroker/iobroker-data/files/vis.0/widgets/f1-live-standings/
+    ```
 
 2. Add widget to VIS view via widget selector (F1 widget set)
 
@@ -56,6 +58,7 @@ Edit `css/f1-live-standings.css` to customize:
 ## Team Colors
 
 Default colors (can be customized in JS):
+
 - Red Bull: #6692FF (blue)
 - Ferrari: #DC0000 (red)
 - Mercedes: #00D2BE (cyan)

@@ -1,72 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Session Info Widget - Preview</title>
-    <link rel="stylesheet" href="css/f1-session-info.css">
-    <style>
-        body {
-            background: #0a0a0a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="f1-session-widget" style="max-width: 400px; max-height: 600px;">
-        <div class="f1-session-header">
-            <span class="f1-session-title">SESSION INFO</span>
-        </div>
-        
-        <div class="f1-session-content">
-            <div class="f1-session-section">
-                <div class="f1-session-type">
-                    <span class="f1-session-type-icon">🏆</span>
-                    <span>Race</span>
-                </div>
-                <div class="f1-session-status active">Active</div>
-            </div>
-            
-            <div class="f1-session-section">
-                <div class="f1-session-track-status">
-                    <span class="f1-session-flag">🟢</span>
-                    <span class="f1-session-flag-text green">Green Flag</span>
-                </div>
-            </div>
-            
-            <div class="f1-session-section">
-                <div class="f1-session-weather">
-                    <div class="f1-session-weather-item">
-                        <div class="f1-session-weather-label">🌡️ Air Temp</div>
-                        <div class="f1-session-weather-value">28°C</div>
-                    </div>
-                    <div class="f1-session-weather-item">
-                        <div class="f1-session-weather-label">🏁 Track Temp</div>
-                        <div class="f1-session-weather-value">42°C</div>
-                    </div>
-                    <div class="f1-session-weather-item">
-                        <div class="f1-session-weather-label">💨 Wind</div>
-                        <div class="f1-session-weather-value">12 km/h NE</div>
-                    </div>
-                    <div class="f1-session-weather-item">
-                        <div class="f1-session-weather-label">💧 Humidity</div>
-                        <div class="f1-session-weather-value">65%</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="f1-session-section">
-                <div class="f1-session-message">
-                    <span class="f1-session-message-icon">📻</span>
-                    <span class="f1-session-message-text">Safety Car deployed - All drivers must reduce speed</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0"
+		/>
+		<title>F1 Session Info Widget - Preview</title>
+		<link
+			rel="stylesheet"
+			href="css/f1-session-info.css"
+		/>
+		<style>
+			body {
+				background: #0a0a0a;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+				margin: 0;
+				padding: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<div
+			class="f1-session-widget"
+			style="max-width: 400px; max-height: 600px"
+		>
+			<div class="f1-session-header">
+				<span class="f1-session-title">SESSION INFO</span>
+			</div>
+
+			<div class="f1-session-content">
+				<div class="f1-session-section">
+					<div class="f1-session-type">
+						<span class="f1-session-type-icon">🏆</span>
+						<span>Race</span>
+					</div>
+					<div class="f1-session-status active">Active</div>
+				</div>
+
+				<div class="f1-session-section">
+					<div class="f1-session-track-status">
+						<span class="f1-session-flag">🟢</span>
+						<span class="f1-session-flag-text green">Green Flag</span>
+					</div>
+				</div>
+
+				<div class="f1-session-section">
+					<div class="f1-session-weather">
+						<div class="f1-session-weather-item">
+							<div class="f1-session-weather-label">🌡️ Air Temp</div>
+							<div class="f1-session-weather-value">28°C</div>
+						</div>
+						<div class="f1-session-weather-item">
+							<div class="f1-session-weather-label">🏁 Track Temp</div>
+							<div class="f1-session-weather-value">42°C</div>
+						</div>
+						<div class="f1-session-weather-item">
+							<div class="f1-session-weather-label">💨 Wind</div>
+							<div class="f1-session-weather-value">12 km/h NE</div>
+						</div>
+						<div class="f1-session-weather-item">
+							<div class="f1-session-weather-label">💧 Humidity</div>
+							<div class="f1-session-weather-value">65%</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="f1-session-section">
+					<div class="f1-session-message">
+						<span class="f1-session-message-icon">📻</span>
+						<span class="f1-session-message-text">Safety Car deployed - All drivers must reduce speed</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
 </html>

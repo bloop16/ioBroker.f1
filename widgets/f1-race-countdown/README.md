@@ -34,4 +34,3 @@ Edit `css/f1-race-countdown.css` to customize colors and layout:
 - Header: `#242424`
 - Accent color: `#9D4EDD` (purple)
 - Text: `#ffffff`
-

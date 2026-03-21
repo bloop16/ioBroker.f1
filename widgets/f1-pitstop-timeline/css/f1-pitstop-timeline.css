@@ -1,103 +1,103 @@
 .f1-pitstop-widget {
-    background: #1a1a1a;
-    border-radius: 8px;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #ffffff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+	background: #1a1a1a;
+	border-radius: 8px;
+	padding: 0;
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	color: #ffffff;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
 }
 
 .f1-pitstop-header {
-    background: #242424;
-    padding: 12px 16px;
-    border-bottom: 2px solid #ff8700;
+	background: #242424;
+	padding: 12px 16px;
+	border-bottom: 2px solid #ff8700;
 }
 
 .f1-pitstop-title {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    color: #ffffff;
-    text-transform: uppercase;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	color: #ffffff;
+	text-transform: uppercase;
 }
 
 .f1-pitstop-content {
-    padding: 12px;
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
+	padding: 12px;
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
 }
 
 .f1-pitstop-row {
-    padding: 12px;
-    margin-bottom: 8px;
-    background: #242424;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+	padding: 12px;
+	margin-bottom: 8px;
+	background: #242424;
+	border-radius: 6px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .f1-pitstop-team-bar {
-    width: 4px;
-    height: 40px;
-    border-radius: 2px;
+	width: 4px;
+	height: 40px;
+	border-radius: 2px;
 }
 
 .f1-pitstop-info {
-    flex: 1;
+	flex: 1;
 }
 
 .f1-pitstop-driver {
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 4px;
+	font-size: 14px;
+	font-weight: 600;
+	color: #ffffff;
+	margin-bottom: 4px;
 }
 
 .f1-pitstop-details {
-    display: flex;
-    gap: 16px;
-    font-size: 12px;
-    color: #999999;
+	display: flex;
+	gap: 16px;
+	font-size: 12px;
+	color: #999999;
 }
 
 .f1-pitstop-lap {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .f1-pitstop-duration {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #ff8700;
-    font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: #ff8700;
+	font-weight: 600;
 }
 
 .f1-pitstop-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: #666666;
-    font-size: 14px;
+	text-align: center;
+	padding: 40px 20px;
+	color: #666666;
+	font-size: 14px;
 }
 
 .f1-pitstop-content::-webkit-scrollbar {
-    width: 8px;
+	width: 8px;
 }
 
 .f1-pitstop-content::-webkit-scrollbar-track {
-    background: #1a1a1a;
+	background: #1a1a1a;
 }
 
 .f1-pitstop-content::-webkit-scrollbar-thumb {
-    background: #ff8700;
-    border-radius: 4px;
+	background: #ff8700;
+	border-radius: 4px;
 }

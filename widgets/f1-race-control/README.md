@@ -17,12 +17,13 @@ VIS1 widget for displaying race control messages and flags.
 - `f1.0.race_control.messages` - JSON array
 
 Expected structure:
+
 ```json
 [
-  {
-    "date": "2026-03-15T14:32:45Z",
-    "message": "SAFETY CAR DEPLOYED"
-  }
+	{
+		"date": "2026-03-15T14:32:45Z",
+		"message": "SAFETY CAR DEPLOYED"
+	}
 ]
 ```
 

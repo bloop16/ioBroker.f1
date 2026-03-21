@@ -1,118 +1,118 @@
 {
-  "i18n": true,
-  "type": "panel",
-  "items": {
-    "_header": {
-      "type": "header",
-      "text": "Formula 1 Adapter Settings",
-      "size": 3,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "_info": {
-      "type": "staticText",
-      "text": "Configure update intervals and polling behavior for OpenF1 API.",
-      "style": {
-        "marginBottom": 20
-      },
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "_pollingHeader": {
-      "type": "header",
-      "text": "Polling Configuration",
-      "size": 4,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "enableDynamicPolling": {
-      "type": "checkbox",
-      "label": "Enable dynamic polling",
-      "default": true,
-      "help": "Automatically switch between fast and slow polling based on race schedule",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "updateIntervalNormal": {
-      "type": "number",
-      "label": "Update interval (normal)",
-      "min": 60,
-      "max": 86400,
-      "default": 3600,
-      "help": "Update interval in seconds when no race session is active (default: 1 hour = 3600s)",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "updateIntervalRace": {
-      "type": "number",
-      "label": "Update interval (race day)",
-      "min": 5,
-      "max": 300,
-      "default": 10,
-      "help": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "_favoritesHeader": {
-      "type": "header",
-      "text": "Favorites (for future highlighting)",
-      "size": 4,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "favoriteDriver": {
-      "type": "text",
-      "label": "Favorite Driver",
-      "placeholder": "e.g., Max Verstappen",
-      "help": "Your favorite driver (will be highlighted in future widgets)",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "favoriteTeam": {
-      "type": "text",
-      "label": "Favorite Team",
-      "placeholder": "e.g., Red Bull Racing",
-      "help": "Your favorite team (will be highlighted in future widgets)",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    },
-    "highlightColor": {
-      "type": "color",
-      "label": "Highlight Color",
-      "default": "#3bb273",
-      "help": "Color for highlighting favorites (hex code)",
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
-    }
-  }
+	"i18n": true,
+	"type": "panel",
+	"items": {
+		"_header": {
+			"type": "header",
+			"text": "Formula 1 Adapter Settings",
+			"size": 3,
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"_info": {
+			"type": "staticText",
+			"text": "Configure update intervals and polling behavior for OpenF1 API.",
+			"style": {
+				"marginBottom": 20
+			},
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"_pollingHeader": {
+			"type": "header",
+			"text": "Polling Configuration",
+			"size": 4,
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"enableDynamicPolling": {
+			"type": "checkbox",
+			"label": "Enable dynamic polling",
+			"default": true,
+			"help": "Automatically switch between fast and slow polling based on race schedule",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"updateIntervalNormal": {
+			"type": "number",
+			"label": "Update interval (normal)",
+			"min": 60,
+			"max": 86400,
+			"default": 3600,
+			"help": "Update interval in seconds when no race session is active (default: 1 hour = 3600s)",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"updateIntervalRace": {
+			"type": "number",
+			"label": "Update interval (race day)",
+			"min": 5,
+			"max": 300,
+			"default": 10,
+			"help": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"_favoritesHeader": {
+			"type": "header",
+			"text": "Favorites (for future highlighting)",
+			"size": 4,
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"favoriteDriver": {
+			"type": "text",
+			"label": "Favorite Driver",
+			"placeholder": "e.g., Max Verstappen",
+			"help": "Your favorite driver (will be highlighted in future widgets)",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"favoriteTeam": {
+			"type": "text",
+			"label": "Favorite Team",
+			"placeholder": "e.g., Red Bull Racing",
+			"help": "Your favorite team (will be highlighted in future widgets)",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		},
+		"highlightColor": {
+			"type": "color",
+			"label": "Highlight Color",
+			"default": "#3bb273",
+			"help": "Color for highlighting favorites (hex code)",
+			"xs": 12,
+			"sm": 12,
+			"md": 6,
+			"lg": 4,
+			"xl": 3
+		}
+	}
 }

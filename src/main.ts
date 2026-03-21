@@ -124,8 +124,10 @@ interface Location {
 }
 
 class F1 extends utils.Adapter {
-	private readonly ERGAST_DRIVER_STANDINGS_URL = "https://api.jolpi.ca/ergast/f1/current/driverstandings.json?limit=100";
-	private readonly ERGAST_CONSTRUCTOR_STANDINGS_URL = "https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
+	private readonly ERGAST_DRIVER_STANDINGS_URL =
+		"https://api.jolpi.ca/ergast/f1/current/driverstandings.json?limit=100";
+	private readonly ERGAST_CONSTRUCTOR_STANDINGS_URL =
+		"https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
 	private currentPollingMode: "race" | "normal" = "normal";
@@ -261,6 +263,69 @@ class F1 extends utils.Adapter {
 					read: true,
 					write: false,
 					...(state.unit && { unit: state.unit }),
+				},
+				native: {},
+			});
+		}
+
+		// Next Session
+		await this.setObjectNotExistsAsync("next_session", {
+			type: "channel",
+			common: { name: "Next Session Information" },
+			native: {},
+		});
+
+		const nextSessionStates = [
+			{ id: "session_name", name: "Session Name", type: "string", role: "text" },
+			{ id: "session_type", name: "Session Type", type: "string", role: "text" },
+			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
+			{ id: "country", name: "Country", type: "string", role: "text" },
+			{ id: "location", name: "Location", type: "string", role: "text" },
+			{ id: "date_start", name: "Session Start", type: "string", role: "date" },
+			{ id: "countdown_days", name: "Days until session", type: "number", role: "value", unit: "days" },
+			{ id: "json", name: "Next Session (JSON)", type: "string", role: "json" },
+		];
+
+		for (const state of nextSessionStates) {
+			await this.setObjectNotExistsAsync(`next_session.${state.id}`, {
+				type: "state",
+				common: {
+					name: state.name,
+					type: state.type as "string" | "number",
+					role: state.role,
+					read: true,
+					write: false,
+					...(state.unit && { unit: state.unit }),
+				},
+				native: {},
+			});
+		}
+
+		// Weekend Sessions
+		await this.setObjectNotExistsAsync("weekend_sessions", {
+			type: "channel",
+			common: { name: "Next Race Weekend Sessions" },
+			native: {},
+		});
+
+		const weekendSessionStates = [
+			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
+			{ id: "country", name: "Country", type: "string", role: "text" },
+			{ id: "location", name: "Location", type: "string", role: "text" },
+			{ id: "sessions_count", name: "Number of Sessions", type: "number", role: "value" },
+			{ id: "next_session_index", name: "Next Session Index", type: "number", role: "value" },
+			{ id: "sessions_json", name: "Weekend Sessions (JSON)", type: "string", role: "json" },
+		];
+
+		for (const state of weekendSessionStates) {
+			await this.setObjectNotExistsAsync(`weekend_sessions.${state.id}`, {
+				type: "state",
+				common: {
+					name: state.name,
+					type: state.type as "string" | "number",
+					role: state.role,
+					read: true,
+					write: false,
 				},
 				native: {},
 			});
@@ -691,7 +756,8 @@ class F1 extends utils.Adapter {
 
 			this.log.debug("Updated standings from Ergast API + OpenF1 headshots");
 		} catch (error) {
-			this.log.error(`Failed to update standings: ${error}`);
+			const message = error instanceof Error ? error.message : String(error);
+			this.log.error(`Failed to update standings: ${message}`);
 		}
 	}
 	private getTeamColour(constructorId: string): string {

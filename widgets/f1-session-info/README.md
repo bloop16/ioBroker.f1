@@ -20,27 +20,29 @@ Requires these ioBroker states:
 - `f1.0.race_control.latest_message` - Latest message (string)
 
 Expected JSON structure:
+
 ```json
 {
-  "session_type": "Race",
-  "status": "active",
-  "track_status": "AllClear",
-  "weather": {
-    "air_temperature": 28,
-    "track_temperature": 42,
-    "wind_speed": 12,
-    "wind_direction": "NE",
-    "humidity": 65
-  }
+	"session_type": "Race",
+	"status": "active",
+	"track_status": "AllClear",
+	"weather": {
+		"air_temperature": 28,
+		"track_temperature": 42,
+		"wind_speed": 12,
+		"wind_direction": "NE",
+		"humidity": 65
+	}
 }
 ```
 
 ## Installation
 
 1. Copy widget files to VIS:
-   ```
-   /opt/iobroker/iobroker-data/files/vis.0/widgets/f1-session-info/
-   ```
+
+    ```
+    /opt/iobroker/iobroker-data/files/vis.0/widgets/f1-session-info/
+    ```
 
 2. Add widget to VIS view via widget selector (F1 widget set)
 

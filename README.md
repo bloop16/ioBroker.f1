@@ -32,15 +32,15 @@ Configure the adapter in the ioBroker Admin interface:
 - Node.js >= 20
 - Internet connection
 
-
 ## Changelog
 
 ### **WORK IN PROGRESS**
 
 ### 0.1.0 (2026-03-15)
-* (bloop) Initial release
-* (bloop) Live F1 data from OpenF1 API
-* (bloop) Next race info, standings, live session data
+
+- (bloop) Initial release
+- (bloop) Live F1 data from OpenF1 API
+- (bloop) Next race info, standings, live session data
 
 ## License
 

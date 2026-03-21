@@ -1,12 +1,6 @@
 {
-  "plugins": [
-    "npm",
-    "github",
-    "iobroker",
-    "license",
-    "manual-review"
-  ],
-  "exec": {
-    "before_commit": "npm run build"
-  }
+	"plugins": ["npm", "github", "iobroker", "license", "manual-review"],
+	"exec": {
+		"before_commit": "npm run build"
+	}
 }
