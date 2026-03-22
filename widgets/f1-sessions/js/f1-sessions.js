@@ -330,4 +330,66 @@
         }, 1000);
     };
 
+    // ── createSessionsWidget ────────────────────────────────────────────────
+    vis.binds["f1"].createSessionsWidget = function (el, view, data, style) {
+        var $div     = $(el);
+        var widgetID = el.id;
+
+        var props = {
+            oid:              data.attr("oid")              || "f1.0.weekend_sessions.sessions_json",
+            color_accent:     data.attr("color_accent")     || "#e10600",
+            color_bg:         data.attr("color_bg")         || "#15151f",
+            color_card:       data.attr("color_card")       || "#1a1a28",
+            color_text:       data.attr("color_text")       || "#eeeeef",
+            color_text_muted: data.attr("color_text_muted") || "#666678",
+            font_size_header: data.attr("font_size_header") || "22px",
+            font_size_session:data.attr("font_size_session")|| "13px",
+            font_size_time:   data.attr("font_size_time")   || "16px",
+            timezone:         data.attr("timezone")         || "Europe/Vienna",
+            language:         data.attr("language")         || "de",
+            show_countdown:   data.attr("show_countdown") !== "false"
+        };
+        var oid  = props.oid;
+        var lang = props.language;
+
+        if (!oid) {
+            $div.html(placeholder(i18n("noOid", lang), props.color_bg));
+            return;
+        }
+
+        function applyData(jsonVal) {
+            if (!jsonVal) {
+                $div.html(placeholder(i18n("waiting", lang), props.color_bg));
+                return;
+            }
+            var sessions;
+            try {
+                sessions = typeof jsonVal === "object" ? jsonVal : JSON.parse(jsonVal);
+            } catch (e) {
+                $div.html(placeholder(i18n("invalid", lang), props.color_bg));
+                console.warn("f1-sessions: JSON parse error", e);
+                return;
+            }
+            $div.html(vis.binds["f1"].renderSessions(sessions, props, widgetID));
+            vis.binds["f1"].startCountdown(widgetID, sessions, props);
+        }
+
+        // Initial state value
+        vis.conn.getStates(oid, function (err, states) {
+            if (!err && states && states[oid] && states[oid].val) {
+                applyData(states[oid].val);
+            } else {
+                $div.html(placeholder(i18n("waiting", lang), props.color_bg));
+            }
+        });
+
+        // Live updates
+        vis.conn.subscribe([oid]);
+        vis.conn._socket.on("stateChange", function (id, state) {
+            if (id === oid && $("#" + widgetID).length) {
+                applyData(state ? state.val : null);
+            }
+        });
+    };
+
 }());
