@@ -67,6 +67,12 @@ describe("f1-sessions helpers", function() {
         it("returns SPR for Sprint", function() {
             assert.strictEqual(h.sessionIcon({ session_type: "Sprint", session_name: "Sprint" }), "SPR");
         });
+        it("returns SQ for Sprint Qualifying", function() {
+            assert.strictEqual(h.sessionIcon({ session_type: "Sprint Qualifying", session_name: "Sprint Qualifying" }), "SQ");
+        });
+        it("returns SS for Sprint Shootout", function() {
+            assert.strictEqual(h.sessionIcon({ session_type: "Sprint Shootout", session_name: "Sprint Shootout" }), "SS");
+        });
     });
 
     // ── pad2 ───────────────────────────────────────────────────────────────

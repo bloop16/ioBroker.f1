@@ -49,7 +49,7 @@
 
     // ── Pure helpers ────────────────────────────────────────────────────────
     function pad2(n) {
-        return String(n).padStart(2, "0");
+        return (n < 10 ? "0" : "") + n;
     }
 
     function i18n(key, lang) {
@@ -82,7 +82,7 @@
         var end   = new Date(s.date_end).getTime();
         if (now >= start && now <= end) return "live";
         if (now < start) return "upcoming";
-        return "completed";
+        return "completed"; // also covers missing/invalid dates (NaN comparisons → false)
     }
 
     function sessionIcon(s) {
