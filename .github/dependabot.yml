@@ -1,14 +1,27 @@
 version: 2
 updates:
     - package-ecosystem: "npm"
-      directory: "/"
+      directories: ["**/*"]
       schedule:
-          interval: "monthly"
+          interval: "daily"
+          time: "04:17"
+          timezone: "UTC"
       open-pull-requests-limit: 10
       ignore:
           # Ignore major version updates to avoid breaking changes
           - dependency-name: "*"
             update-types: ["version-update:semver-major"]
+      labels:
+          - "dependencies"
+          - "automerge"
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "daily"
+          time: "05:42"
+          time: "03:00"
+          timezone: "UTC"
+      open-pull-requests-limit: 5
       labels:
           - "dependencies"
           - "automerge"

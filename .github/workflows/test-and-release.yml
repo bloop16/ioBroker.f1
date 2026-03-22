@@ -13,6 +13,11 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-**"
   pull_request: {}
 
+# Limit concurrent runs to the latest for each branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Performs quick checks before the expensive test runs
   check-and-lint:
@@ -30,6 +35,7 @@ jobs:
 
   # Runs adapter tests on all supported node versions and OSes
   adapter-tests:
+    needs: check-and-lint
     if: contains(github.event.head_commit.message, '[skip ci]') == false
 
     runs-on: ${{ matrix.os }}

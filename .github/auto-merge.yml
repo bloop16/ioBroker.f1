@@ -1,0 +1,17 @@
+# Auto-merge configuration for Dependabot PRs
+# Recommendations: merge patch updates for production, patch+minor for dev dependencies
+
+- match:
+    # Merge patch updates for production dependencies
+    dependency_type: production
+    update_type: "semver:patch"
+
+- match:
+    # Merge patch and minor updates for development dependencies
+    dependency_type: development
+    update_type: "semver:minor"
+
+- match:
+    # Merge patch and minor updates for package-lock.json only changes
+    dependency_type: package-lock
+    update_type: "semver:minor"
