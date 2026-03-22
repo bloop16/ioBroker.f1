@@ -58,20 +58,24 @@
         return row[lang] || row["en"];
     }
 
-    function fmtTime(dateStr, tz) {
-        return new Date(dateStr).toLocaleTimeString("de-AT", {
+    function langToLocale(lang) {
+        return lang === "en" ? "en-GB" : "de-AT";
+    }
+
+    function fmtTime(dateStr, tz, lang) {
+        return new Date(dateStr).toLocaleTimeString(langToLocale(lang), {
             hour: "2-digit", minute: "2-digit", timeZone: tz
         });
     }
 
-    function fmtDateShort(dateStr, tz) {
-        return new Date(dateStr).toLocaleDateString("de-AT", {
+    function fmtDateShort(dateStr, tz, lang) {
+        return new Date(dateStr).toLocaleDateString(langToLocale(lang), {
             day: "2-digit", month: "2-digit", timeZone: tz
         });
     }
 
-    function fmtDateLong(dateStr, tz) {
-        return new Date(dateStr).toLocaleDateString("de-AT", {
+    function fmtDateLong(dateStr, tz, lang) {
+        return new Date(dateStr).toLocaleDateString(langToLocale(lang), {
             weekday: "short", day: "2-digit", month: "short", timeZone: tz
         });
     }
@@ -92,9 +96,10 @@
         }
         if (s.session_type === "Qualifying") return "Q";
         if (s.session_type === "Race")       return "R";
-        if (s.session_type === "Sprint")     return "SPR";
+        // Check compound sprint names before the generic Sprint type
         if (s.session_name.indexOf("Sprint Qualifying") >= 0) return "SQ";
         if (s.session_name.indexOf("Sprint Shootout")   >= 0) return "SS";
+        if (s.session_type === "Sprint" || s.session_type.indexOf("Sprint") >= 0) return "SPR";
         return s.session_type.substring(0, 2).toUpperCase();
     }
 
@@ -114,6 +119,7 @@
     vis.binds["f1"]._test = {
         FLAGS: FLAGS, GP_NAMES: GP_NAMES,
         pad2: pad2, i18n: i18n,
+        langToLocale: langToLocale,
         fmtTime: fmtTime, fmtDateShort: fmtDateShort, fmtDateLong: fmtDateLong,
         sessionStatus: sessionStatus, sessionIcon: sessionIcon, iconColors: iconColors
     };
@@ -152,8 +158,8 @@
         var first = sessions[0];
         var flag  = FLAGS[first.country_code] || "🏁";
         var gpName = GP_NAMES[first.country_name] || (first.country_name + " GP");
-        var dateRange = fmtDateShort(first.date_start, tz) + " – " +
-                        fmtDateShort(sessions[sessions.length - 1].date_start, tz);
+        var dateRange = fmtDateShort(first.date_start, tz, lang) + " – " +
+                        fmtDateShort(sessions[sessions.length - 1].date_start, tz, lang);
 
         var liveSession = null;
         var nextSession = null;
@@ -232,12 +238,12 @@
             // Name + date
             html += '<div style="flex:1;min-width:0;">';
             html += '<div style="font-size:' + sesSz + ';font-weight:700;color:' + (status === "completed" ? "#666" : C.text) + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + s.session_name + '</div>';
-            html += '<div style="font-size:10px;color:#888;">' + fmtDateLong(s.date_start, tz) + ' · ' + fmtTime(s.date_start, tz) + ' – ' + fmtTime(s.date_end, tz) + '</div>';
+            html += '<div style="font-size:10px;color:#888;">' + fmtDateLong(s.date_start, tz, lang) + ' · ' + fmtTime(s.date_start, tz, lang) + ' – ' + fmtTime(s.date_end, tz, lang) + '</div>';
             html += '</div>';
 
             // Time + tag
             html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap;">';
-            html += '<span style="font-size:' + timSz + ';font-weight:700;color:' + (status === "completed" ? "#555" : C.text) + ';">' + fmtTime(s.date_start, tz) + '</span>';
+            html += '<span style="font-size:' + timSz + ';font-weight:700;color:' + (status === "completed" ? "#555" : C.text) + ';">' + fmtTime(s.date_start, tz, lang) + '</span>';
             if (isLive) {
                 html += '<span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;padding:2px 7px;border-radius:2px;background:' + C.green + ';color:#111;">' + i18n("live", lang) + '</span>';
             } else if (isNext) {
@@ -252,7 +258,6 @@
 
         // Countdown section
         if (props.show_countdown !== false && (liveSession || nextSession)) {
-            var cdTarget = liveSession ? liveSession : nextSession;
             var cdLabel  = liveSession
                 ? (liveSession.session_name + (lang === "de" ? " läuft" : " running"))
                 : ((lang === "de" ? "Nächste: " : "Next: ") + nextSession.session_name);
@@ -289,6 +294,13 @@
     vis.binds["f1"].startCountdown = function (widgetID, sessions, props) {
         if (props.show_countdown === false) return;
 
+        // Cancel any existing countdown interval for this widget instance
+        var $widget = $("#" + widgetID);
+        var existing = $widget.data("f1-cd-interval");
+        if (existing) {
+            clearInterval(existing);
+        }
+
         var liveSession = null;
         var nextSession = null;
         for (var i = 0; i < sessions.length; i++) {
@@ -305,7 +317,6 @@
             : new Date(nextSession.date_start).getTime();
 
         var interval = setInterval(function () {
-            // Stop if widget was removed from the DOM
             if (!$("#" + widgetID).length) {
                 clearInterval(interval);
                 return;
@@ -328,6 +339,9 @@
             $("#" + widgetID + "-cd-m").text(pad2(m));
             $("#" + widgetID + "-cd-s").text(pad2(s));
         }, 1000);
+
+        // Store handle so it can be cancelled on next data update
+        $widget.data("f1-cd-interval", interval);
     };
 
     // ── createSessionsWidget ────────────────────────────────────────────────
@@ -375,9 +389,9 @@
         }
 
         // Initial state value
-        vis.conn.getStates(oid, function (err, states) {
-            if (!err && states && states[oid] && states[oid].val) {
-                applyData(states[oid].val);
+        vis.conn.getState(oid, function (err, state) {
+            if (!err && state && state.val) {
+                applyData(state.val);
             } else {
                 $div.html(placeholder(i18n("waiting", lang), props.color_bg));
             }

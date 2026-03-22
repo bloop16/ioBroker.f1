@@ -110,4 +110,17 @@ describe("f1-sessions helpers", function() {
             assert.strictEqual(h.GP_NAMES["Japan"], "Japanese GP");
         });
     });
+
+    // ── langToLocale ───────────────────────────────────────────────────────
+    describe("langToLocale", function() {
+        it("maps de to de-AT", function() {
+            assert.strictEqual(h.langToLocale("de"), "de-AT");
+        });
+        it("maps en to en-GB", function() {
+            assert.strictEqual(h.langToLocale("en"), "en-GB");
+        });
+        it("falls back to de-AT for unknown lang", function() {
+            assert.strictEqual(h.langToLocale("fr"), "de-AT");
+        });
+    });
 });
