@@ -55,6 +55,7 @@
 	"files": [
 		"admin/",
 		"build/",
+		"widgets/",
 		"io-package.json",
 		"LICENSE"
 	],
@@ -63,6 +64,7 @@
 		"test:package": "mocha test/package --exit",
 		"test:unit": "mocha test/unit --exit",
 		"test:integration": "mocha test/integration --exit",
+		"test:widgets": "mocha test/widgets --exit",
 		"test": "npm run test:unit && npm run test:package",
 		"check": "tsc --noEmit -p tsconfig.check.json",
 		"lint": "eslint -c eslint.config.mjs",

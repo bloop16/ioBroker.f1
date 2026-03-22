@@ -86,7 +86,8 @@
 			"license": "MIT",
 			"type": "free"
 		},
-		"tier": 3
+		"tier": 3,
+		"restartAdapters": ["vis"]
 	},
 	"native": {
 		"favoriteDriver": "",
