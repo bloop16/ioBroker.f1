@@ -36,6 +36,12 @@ Configure the adapter in the ioBroker Admin interface:
 
 ### **WORK IN PROGRESS**
 
+### 0.1.1 (2026-03-22)
+
+- (bloop) Removed unused widgets
+- (bloop) Fixed repository checker findings for Dependabot and CI
+- (bloop) Added missing translations and maintenance metadata
+
 ### 0.1.0 (2026-03-15)
 
 - (bloop) Initial release
