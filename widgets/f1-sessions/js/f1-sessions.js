@@ -285,4 +285,49 @@
         return html;
     };
 
+    // ── startCountdown ──────────────────────────────────────────────────────
+    vis.binds["f1"].startCountdown = function (widgetID, sessions, props) {
+        if (props.show_countdown === false) return;
+
+        var liveSession = null;
+        var nextSession = null;
+        for (var i = 0; i < sessions.length; i++) {
+            var st = sessionStatus(sessions[i]);
+            if (st === "live"     && !liveSession) liveSession = sessions[i];
+            if (st === "upcoming" && !nextSession)  nextSession = sessions[i];
+        }
+
+        var target = liveSession || nextSession;
+        if (!target) return;
+
+        var targetTime = liveSession
+            ? new Date(liveSession.date_end).getTime()
+            : new Date(nextSession.date_start).getTime();
+
+        var interval = setInterval(function () {
+            // Stop if widget was removed from the DOM
+            if (!$("#" + widgetID).length) {
+                clearInterval(interval);
+                return;
+            }
+
+            var diff = targetTime - Date.now();
+            if (diff <= 0) {
+                clearInterval(interval);
+                $("#" + widgetID + "-cd-h").text("00");
+                $("#" + widgetID + "-cd-m").text("00");
+                $("#" + widgetID + "-cd-s").text("00");
+                return;
+            }
+
+            var h = Math.floor(diff / 3600000);
+            var m = Math.floor((diff % 3600000) / 60000);
+            var s = Math.floor((diff % 60000) / 1000);
+
+            $("#" + widgetID + "-cd-h").text(pad2(h));
+            $("#" + widgetID + "-cd-m").text(pad2(m));
+            $("#" + widgetID + "-cd-s").text(pad2(s));
+        }, 1000);
+    };
+
 }());
