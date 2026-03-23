@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.1",
+		"version": "0.1.2",
 		"news": {
+			"0.1.2": {
+				"en": "Added VIS1 F1 Sessions widget with configurable colors, fonts, countdown and dynamic scaling",
+				"de": "VIS1 F1 Sessions Widget hinzugefügt mit konfigurierbaren Farben, Schriftgrößen, Countdown und dynamischer Skalierung",
+				"ru": "Добавлен виджет VIS1 F1 Sessions с настраиваемыми цветами, шрифтами, обратным отсчётом и динамическим масштабированием",
+				"pt": "Adicionado widget VIS1 F1 Sessions com cores, fontes, contagem regressiva e escala dinâmica configuráveis",
+				"nl": "VIS1 F1 Sessions widget toegevoegd met configureerbare kleuren, lettertypen, aftelling en dynamische schaling",
+				"fr": "Ajout du widget VIS1 F1 Sessions avec couleurs, polices, compte à rebours et mise à l'échelle dynamique configurables",
+				"it": "Aggiunto widget VIS1 F1 Sessions con colori, caratteri, conto alla rovescia e ridimensionamento dinamico configurabili",
+				"es": "Se agregó el widget VIS1 F1 Sessions con colores, fuentes, cuenta regresiva y escala dinámica configurables",
+				"pl": "Dodano widget VIS1 F1 Sessions z konfigurowalnymi kolorami, czcionkami, odliczaniem i dynamicznym skalowaniem",
+				"uk": "Додано віджет VIS1 F1 Sessions з налаштовуваними кольорами, шрифтами, зворотним відліком та динамічним масштабуванням",
+				"zh-cn": "新增 VIS1 F1 Sessions 小部件，支持可配置的颜色、字体、倒计时和动态缩放"
+			},
 			"0.1.1": {
 				"en": "Removed widgets, improved repository hygiene (Dependabot, CI/CD, translations)",
 				"de": "Widgets entfernt, verbesserte Repository-Wartung (Dependabot, CI/CD, Übersetzungen)",

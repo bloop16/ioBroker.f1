@@ -14,11 +14,10 @@
         data-vis-type="static"
         data-vis-name="F1 Sessions"
         data-vis-prev='<div style="width:120px;height:80px;background:#15151f;border-radius:6px;display:flex;flex-direction:column;overflow:hidden;"><div style="background:linear-gradient(135deg,#e10600,#a00400);padding:6px 8px;"><div style="font-size:8px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">Japanese GP</div><div style="font-size:6px;color:rgba(255,255,255,0.7);">Suzuka · 2026</div></div><div style="padding:4px 6px;display:flex;flex-direction:column;gap:2px;"><div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;border-radius:2px;background:rgba(0,188,212,0.2);color:#00bcd4;font-size:5px;display:flex;align-items:center;justify-content:center;font-weight:800;">FP1</div><div style="font-size:6px;color:#eee;">Practice 1</div><div style="font-size:6px;color:#888;margin-left:auto;">11:30</div></div><div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;border-radius:2px;background:rgba(255,214,0,0.2);color:#ffd600;font-size:5px;display:flex;align-items:center;justify-content:center;font-weight:800;">Q</div><div style="font-size:6px;color:#eee;">Qualifying</div><div style="font-size:6px;color:#888;margin-left:auto;">15:00</div></div></div></div>'
-        data-vis-attrs="oid/id;color_accent[#e10600]/color;color_bg[#15151f]/color;color_card[#1a1a28]/color;color_text[#eeeeef]/color;color_text_muted[#666678]/color;font_size_header[22px];font_size_session[13px];font_size_time[16px];timezone[Europe/Vienna];language[de];show_countdown[true]/checkbox">
+        data-vis-attrs="color_accent[#e10600]/color;color_bg[#15151f]/color;color_card[#1a1a28]/color;color_text[#eeeeef]/color;color_text_muted[#666678]/color;font_size_header[22px];font_size_session[13px];font_size_time[16px];font_size_countdown[24px];timezone[Europe/Vienna];language[de];show_countdown[true]/checkbox">
   <div class="vis-widget <%== this.data.attr('class') %>"
        id="<%= this.data.attr('wid') %>"
-       style="width:440px;height:600px;overflow:hidden;"
-       <%= (el) -> vis.binds["f1"].createSessionsWidget(el, view, data, style) %>>
-    <div style="padding:20px;text-align:center;color:#666;">Loading…</div>
+       style="width:440px;height:600px;overflow:hidden;">
+    <% vis.binds["f1"].createSessionsWidget(this.data.attr('wid'), this.view, this.data, this.style); %>
   </div>
 </script>

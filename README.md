@@ -18,6 +18,12 @@ Formula 1 live data integration for ioBroker using the [OpenF1 API](https://open
 - **Telemetry** - Speed, throttle, brake, gear, RPM, DRS
 - **Track Position** - Real-time car positions (X/Y/Z coordinates)
 
+## VIS1 Widgets
+
+### F1 Sessions
+
+Session schedule for the current Grand Prix with live countdown. Colors, font sizes, timezone and language are configurable per widget instance in the VIS editor.
+
 ## Configuration
 
 Configure the adapter in the ioBroker Admin interface:
@@ -34,7 +40,11 @@ Configure the adapter in the ioBroker Admin interface:
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.1.2 (2026-03-23)
+
+- (bloop) Added VIS1 F1 Sessions widget with configurable colors, fonts and countdown
+- (bloop) Dynamic widget scaling to any size in VIS editor
+- (bloop) Countdown shows days, hours, minutes, seconds
 
 ### 0.1.1 (2026-03-22)
 

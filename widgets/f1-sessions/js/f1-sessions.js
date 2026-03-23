@@ -147,9 +147,13 @@
             green:   "#00e676",
             yellow:  "#ffd600"
         };
-        var hdrSz = props.font_size_header  || "22px";
-        var sesSz = props.font_size_session || "13px";
-        var timSz = props.font_size_time    || "16px";
+        var hdrSz = props.font_size_header    || "22px";
+        var sesSz = props.font_size_session  || "13px";
+        var timSz = props.font_size_time     || "16px";
+        var cdSz  = props.font_size_countdown || "24px";
+        var sesPx = parseInt(sesSz, 10) || 13;
+        var dateSz = Math.round(sesPx * 0.77) + "px";
+        var badgeSz = Math.round(sesPx * 0.85) + "px";
 
         if (!sessions || !sessions.length) {
             return placeholder(i18n("waiting", lang), C.bg);
@@ -179,13 +183,14 @@
         html += '<div>';
         html += '<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.75);font-weight:600;">' + flag + ' ' + first.country_code + '</div>';
         html += '<div style="font-size:' + hdrSz + ';font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#fff;line-height:1.15;margin-top:1px;">' + gpName + '</div>';
-        html += '<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;">' + first.circuit_short_name + ' · ' + first.location + '</div>';
+        var circuitLine = first.circuit_short_name === first.location
+            ? first.location
+            : first.circuit_short_name + ' · ' + first.location;
+        html += '<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;">' + circuitLine + '</div>';
         html += '</div>';
         html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">';
         if (liveSession) {
             html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:' + C.green + ';color:#111;">● LIVE</span>';
-        } else if (nextSession) {
-            html += '<span style="padding:3px 10px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);">' + i18n("upcoming", lang) + '</span>';
         }
         html += '<span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.6);">' + first.year + '</span>';
         html += '</div></div>';
@@ -233,12 +238,12 @@
             html += '<div style="display:flex;align-items:center;padding:10px 18px 10px ' + padLeft + ';gap:12px;border-bottom:1px solid rgba(42,42,58,0.4);background:' + rowBg + ';border-left:' + leftBorder + ';">';
 
             // Badge icon
-            html += '<div style="width:38px;height:38px;min-width:38px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:' + ic.bg + ';color:' + ic.color + ';border:1px solid ' + ic.border + ';">' + icon + '</div>';
+            html += '<div style="width:38px;height:38px;min-width:38px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:' + badgeSz + ';font-weight:800;background:' + ic.bg + ';color:' + ic.color + ';border:1px solid ' + ic.border + ';">' + icon + '</div>';
 
             // Name + date
             html += '<div style="flex:1;min-width:0;">';
             html += '<div style="font-size:' + sesSz + ';font-weight:700;color:' + (status === "completed" ? "#666" : C.text) + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + s.session_name + '</div>';
-            html += '<div style="font-size:10px;color:#888;">' + fmtDateLong(s.date_start, tz, lang) + ' · ' + fmtTime(s.date_start, tz, lang) + ' – ' + fmtTime(s.date_end, tz, lang) + '</div>';
+            html += '<div style="font-size:' + dateSz + ';color:#888;">' + fmtDateLong(s.date_start, tz, lang) + ' · ' + fmtTime(s.date_start, tz, lang) + ' – ' + fmtTime(s.date_end, tz, lang) + '</div>';
             html += '</div>';
 
             // Time + tag
@@ -267,24 +272,25 @@
 
             var valColor = liveSession ? C.green : C.text;
             var lblStyle = "font-size:7px;text-transform:uppercase;letter-spacing:1.5px;color:" + C.dim + ";font-weight:600;margin-top:3px;";
-            var sepStyle = "font-size:24px;font-weight:300;color:" + C.dim + ";line-height:1;";
+            var sepStyle = "font-size:" + cdSz + ";font-weight:300;color:" + C.dim + ";line-height:1;";
 
             html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:40px;">';
-            html += '<span id="' + widgetID + '-cd-h" style="font-size:24px;font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
+            html += '<span id="' + widgetID + '-cd-d" style="font-size:' + cdSz + ';font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
+            html += '<span style="' + lblStyle + '">' + (lang === "de" ? "Tage" : "d") + '</span></div>';
+            html += '<span style="' + sepStyle + '">:</span>';
+            html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:40px;">';
+            html += '<span id="' + widgetID + '-cd-h" style="font-size:' + cdSz + ';font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
             html += '<span style="' + lblStyle + '">' + (lang === "de" ? "Std" : "h") + '</span></div>';
             html += '<span style="' + sepStyle + '">:</span>';
             html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:40px;">';
-            html += '<span id="' + widgetID + '-cd-m" style="font-size:24px;font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
+            html += '<span id="' + widgetID + '-cd-m" style="font-size:' + cdSz + ';font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
             html += '<span style="' + lblStyle + '">' + (lang === "de" ? "Min" : "m") + '</span></div>';
             html += '<span style="' + sepStyle + '">:</span>';
             html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:40px;">';
-            html += '<span id="' + widgetID + '-cd-s" style="font-size:24px;font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
+            html += '<span id="' + widgetID + '-cd-s" style="font-size:' + cdSz + ';font-weight:900;line-height:1;color:' + valColor + ';">--</span>';
             html += '<span style="' + lblStyle + '">' + (lang === "de" ? "Sek" : "s") + '</span></div>';
             html += '</div>';
         }
-
-        // Footer
-        html += '<div style="padding:8px 18px;text-align:center;font-size:8px;color:' + C.dim + ';letter-spacing:1.5px;text-transform:uppercase;background:' + C.card2 + ';">F1 · ioBroker · OpenF1</div>';
 
         html += '</div>'; // close wrapper
         return html;
@@ -325,16 +331,19 @@
             var diff = targetTime - Date.now();
             if (diff <= 0) {
                 clearInterval(interval);
+                $("#" + widgetID + "-cd-d").text("00");
                 $("#" + widgetID + "-cd-h").text("00");
                 $("#" + widgetID + "-cd-m").text("00");
                 $("#" + widgetID + "-cd-s").text("00");
                 return;
             }
 
-            var h = Math.floor(diff / 3600000);
+            var d = Math.floor(diff / 86400000);
+            var h = Math.floor((diff % 86400000) / 3600000);
             var m = Math.floor((diff % 3600000) / 60000);
             var s = Math.floor((diff % 60000) / 1000);
 
+            $("#" + widgetID + "-cd-d").text(pad2(d));
             $("#" + widgetID + "-cd-h").text(pad2(h));
             $("#" + widgetID + "-cd-m").text(pad2(m));
             $("#" + widgetID + "-cd-s").text(pad2(s));
@@ -345,12 +354,14 @@
     };
 
     // ── createSessionsWidget ────────────────────────────────────────────────
-    vis.binds["f1"].createSessionsWidget = function (el, view, data, style) {
-        var $div     = $(el);
-        var widgetID = el.id;
+    vis.binds["f1"].createSessionsWidget = function (widgetID, view, data, style) {
+        // Defer until VIS has inserted the widget div into the DOM
+        setTimeout(function () {
+        var $div = $("#" + widgetID);
+        if (!$div.length) { return; }
 
         var props = {
-            oid:              data.attr("oid")              || "f1.0.weekend_sessions.sessions_json",
+            oid:              "f1.0.weekend_sessions.sessions_json",
             color_accent:     data.attr("color_accent")     || "#e10600",
             color_bg:         data.attr("color_bg")         || "#15151f",
             color_card:       data.attr("color_card")       || "#1a1a28",
@@ -358,10 +369,11 @@
             color_text_muted: data.attr("color_text_muted") || "#666678",
             font_size_header: data.attr("font_size_header") || "22px",
             font_size_session:data.attr("font_size_session")|| "13px",
-            font_size_time:   data.attr("font_size_time")   || "16px",
+            font_size_time:       data.attr("font_size_time")       || "16px",
+            font_size_countdown:  data.attr("font_size_countdown")  || "24px",
             timezone:         data.attr("timezone")         || "Europe/Vienna",
             language:         data.attr("language")         || "de",
-            show_countdown:   data.attr("show_countdown") !== "false"
+            show_countdown:   String(data.attr("show_countdown")) !== "false"
         };
         var oid  = props.oid;
         var lang = props.language;
@@ -371,9 +383,28 @@
             return;
         }
 
+        function applyScale() {
+            var designW = 440;
+            var $content = $div.find(".f1-sessions-widget");
+            if (!$content.length) { return; }
+            // Reset to measure natural height of current content
+            $content.css({ "transform": "none", "width": designW + "px", "height": "auto" });
+            var designH = $content.outerHeight() || 600;
+            var w = $div.width() || designW;
+            var h = $div.height() || designH;
+            var scale = Math.min(w / designW, h / designH);
+            $content.css({
+                "transform": "scale(" + scale + ")",
+                "transform-origin": "0 0",
+                "width": designW + "px",
+                "height": designH + "px"
+            });
+        }
+
         function applyData(jsonVal) {
             if (!jsonVal) {
                 $div.html(placeholder(i18n("waiting", lang), props.color_bg));
+                applyScale();
                 return;
             }
             var sessions;
@@ -385,15 +416,23 @@
                 return;
             }
             $div.html(vis.binds["f1"].renderSessions(sessions, props, widgetID));
+            applyScale();
             vis.binds["f1"].startCountdown(widgetID, sessions, props);
         }
 
+        // Re-scale when widget frame is resized in VIS editor
+        if (window.ResizeObserver) {
+            var ro = new ResizeObserver(function () { applyScale(); });
+            ro.observe($div[0]);
+        }
+
         // Initial state value
-        vis.conn.getState(oid, function (err, state) {
-            if (!err && state && state.val) {
-                applyData(state.val);
+        vis.conn.getStates(oid, function (err, states) {
+            if (!err && states && states[oid] && states[oid].val) {
+                applyData(states[oid].val);
             } else {
                 $div.html(placeholder(i18n("waiting", lang), props.color_bg));
+                applyScale();
             }
         });
 
@@ -404,6 +443,8 @@
                 applyData(state ? state.val : null);
             }
         });
+
+        }, 0); // end setTimeout
     };
 
 }());
