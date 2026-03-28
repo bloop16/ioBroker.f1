@@ -607,6 +607,38 @@ class F1 extends utils.Adapter {
 				native: {},
 			});
 		}
+
+		// Session Results
+		await this.setObjectNotExistsAsync("session_results", {
+			type: "channel",
+			common: { name: "Session Results" },
+			native: {},
+		});
+
+		const sessionResultStates = [
+			{ id: "fp1", name: "Free Practice 1 Result" },
+			{ id: "fp2", name: "Free Practice 2 Result" },
+			{ id: "fp3", name: "Free Practice 3 Result" },
+			{ id: "sprint_qualifying", name: "Sprint Qualifying Result" },
+			{ id: "sprint", name: "Sprint Race Result" },
+			{ id: "qualifying", name: "Qualifying Result" },
+			{ id: "race", name: "Race Result" },
+			{ id: "last_update", name: "Last Update" },
+		];
+
+		for (const state of sessionResultStates) {
+			await this.setObjectNotExistsAsync(`session_results.${state.id}`, {
+				type: "state",
+				common: {
+					name: state.name,
+					type: "string",
+					role: state.id === "last_update" ? "date" : "json",
+					read: true,
+					write: false,
+				},
+				native: {},
+			});
+		}
 	}
 
 	private async fetchData(): Promise<void> {
