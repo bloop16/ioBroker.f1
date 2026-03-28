@@ -43,9 +43,12 @@ class F1 extends utils.Adapter {
     ERGAST_CONSTRUCTOR_STANDINGS_URL = "https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
     updateInterval;
     api;
+    ergastApi;
     currentPollingMode = "normal";
     currentSessionKey;
     isFetching = false;
+    lastCompletedSessionKey;
+    lastLiveSessionStatus = "no_session";
     constructor(options = {}) {
         super({
             ...options,
@@ -53,6 +56,10 @@ class F1 extends utils.Adapter {
         });
         this.api = axios_1.default.create({
             baseURL: "https://api.openf1.org/v1",
+            timeout: 10000,
+            headers: { "User-Agent": "ioBroker.f1" },
+        });
+        this.ergastApi = axios_1.default.create({
             timeout: 10000,
             headers: { "User-Agent": "ioBroker.f1" },
         });
@@ -461,6 +468,35 @@ class F1 extends utils.Adapter {
                 native: {},
             });
         }
+        // Session Results
+        await this.setObjectNotExistsAsync("session_results", {
+            type: "channel",
+            common: { name: "Session Results" },
+            native: {},
+        });
+        const sessionResultStates = [
+            { id: "fp1", name: "Free Practice 1 Result" },
+            { id: "fp2", name: "Free Practice 2 Result" },
+            { id: "fp3", name: "Free Practice 3 Result" },
+            { id: "sprint_qualifying", name: "Sprint Qualifying Result" },
+            { id: "sprint", name: "Sprint Race Result" },
+            { id: "qualifying", name: "Qualifying Result" },
+            { id: "race", name: "Race Result" },
+            { id: "last_update", name: "Last Update" },
+        ];
+        for (const state of sessionResultStates) {
+            await this.setObjectNotExistsAsync(`session_results.${state.id}`, {
+                type: "state",
+                common: {
+                    name: state.name,
+                    type: "string",
+                    role: state.id === "last_update" ? "date" : "json",
+                    read: true,
+                    write: false,
+                },
+                native: {},
+            });
+        }
     }
     async fetchData() {
         if (this.isFetching) {
@@ -470,20 +506,21 @@ class F1 extends utils.Adapter {
         this.isFetching = true;
         try {
             this.log.debug("Fetching data from OpenF1 API...");
-            const nextRace = await this.getNextRace();
+            const now = new Date();
+            const allSessions = await this.fetchAllSessionsForYear(now.getFullYear());
+            const nextRace = this.findNextRace(allSessions, now);
             if (nextRace) {
                 await this.updateNextRaceStates(nextRace);
-                // Fetch next session (any type) and weekend sessions
-                const nextSession = await this.getNextSession();
+                const nextSession = this.findNextSession(allSessions, now);
                 if (nextSession) {
                     await this.updateNextSession(nextSession);
                 }
-                const weekendSessions = await this.getWeekendSessions();
+                const weekendSessions = this.buildWeekendSessions(allSessions, now);
                 if (weekendSessions) {
                     await this.updateWeekendSessions(weekendSessions);
                 }
             }
-            await this.updateStandings();
+            await this.updateStandingsIfNeeded();
             if (this.currentSessionKey) {
                 await this.updateLiveSession();
                 await this.updateRaceControl();
@@ -511,25 +548,42 @@ class F1 extends utils.Adapter {
             this.isFetching = false;
         }
     }
-    async getNextRace() {
-        try {
-            const now = new Date();
-            const year = now.getFullYear();
-            const response = await this.api.get("/sessions", {
-                params: { session_name: "Race", year: year },
-            });
-            if (response.data && response.data.length > 0) {
-                const futureRaces = response.data.filter((race) => new Date(race.date_start) > now);
-                if (futureRaces.length > 0) {
-                    return futureRaces.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())[0];
-                }
-            }
+    async fetchAllSessionsForYear(year) {
+        const response = await this.api.get("/sessions", {
+            params: { year },
+        });
+        return response.data ?? [];
+    }
+    findNextRace(sessions, now) {
+        const futureRaces = sessions
+            .filter(s => s.session_name === "Race" && new Date(s.date_start) > now)
+            .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+        return futureRaces[0] ?? null;
+    }
+    findNextSession(sessions, now) {
+        const future = sessions
+            .filter(s => new Date(s.date_start) > now)
+            .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+        return future[0] ?? null;
+    }
+    buildWeekendSessions(sessions, now) {
+        const future = sessions
+            .filter(s => new Date(s.date_start) > now)
+            .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+        if (future.length === 0) {
             return null;
         }
-        catch {
-            this.log.error("Failed to get next race");
-            return null;
-        }
+        const first = future[0];
+        const weekendEnd = new Date(new Date(first.date_start).getTime() + 7 * 24 * 60 * 60 * 1000);
+        const weekendList = future.filter(s => s.circuit_short_name === first.circuit_short_name && new Date(s.date_start) <= weekendEnd);
+        return {
+            circuit: first.circuit_short_name,
+            country: first.country_name,
+            location: first.location,
+            year: first.year,
+            sessions: weekendList,
+            next_session_index: 0,
+        };
     }
     async updateNextRaceStates(race) {
         await this.setStateAsync("next_race.circuit", { val: race.circuit_short_name, ack: true });
@@ -542,68 +596,76 @@ class F1 extends utils.Adapter {
         this.log.debug("Next race updated");
     }
     async updateStandings() {
-        try {
-            // Fetch driver standings from Ergast API
-            const driverResponse = await axios_1.default.get(this.ERGAST_DRIVER_STANDINGS_URL);
-            const driverStandings = driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
-            // Fetch constructor standings from Ergast API
-            const constructorResponse = await axios_1.default.get(this.ERGAST_CONSTRUCTOR_STANDINGS_URL);
-            const constructorStandings = constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
-            if (driverStandings.length > 0) {
-                // Fetch driver details from OpenF1 for headshot URLs
-                const openF1Response = await this.api.get("/drivers", {
-                    params: { session_key: "latest" },
-                });
-                const openF1Drivers = openF1Response.data || [];
-                // Create lookup map by driver number
-                const headshotMap = new Map();
-                openF1Drivers.forEach((driver) => {
-                    if (driver.headshot_url) {
-                        headshotMap.set(driver.driver_number, driver.headshot_url);
-                    }
-                });
-                // Transform Ergast data to our format
-                const drivers = driverStandings.map((standing) => {
-                    const driverNumber = parseInt(standing.Driver.permanentNumber);
-                    return {
+        const delays = [5000, 15000, 45000];
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const [driverResponse, constructorResponse] = await Promise.all([
+                    this.ergastApi.get(this.ERGAST_DRIVER_STANDINGS_URL),
+                    this.ergastApi.get(this.ERGAST_CONSTRUCTOR_STANDINGS_URL),
+                ]);
+                const driverStandings = driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings ?? [];
+                const constructorStandings = constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings ?? [];
+                if (driverStandings.length > 0) {
+                    const openF1Response = await this.api.get("/drivers", {
+                        params: { session_key: "latest" },
+                    });
+                    const openF1Drivers = openF1Response.data ?? [];
+                    const drivers = driverStandings.map((standing) => {
+                        const driverNumber = parseInt(standing.Driver.permanentNumber);
+                        const openF1Driver = openF1Drivers.find(d => d.driver_number === driverNumber);
+                        return {
+                            position: parseInt(standing.position),
+                            driver_number: driverNumber,
+                            full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
+                            name_acronym: standing.Driver.code ?? "",
+                            team_name: standing.Constructors?.[0]?.name ?? "",
+                            team_colour: this.getTeamColour(standing.Constructors?.[0]?.constructorId ?? ""),
+                            points: parseFloat(standing.points),
+                            wins: parseInt(standing.wins),
+                            headshot_url: openF1Driver?.headshot_url ?? "",
+                        };
+                    });
+                    await this.setStateAsync("standings.drivers", { val: JSON.stringify(drivers, null, 2), ack: true });
+                }
+                if (constructorStandings.length > 0) {
+                    const teams = constructorStandings.map((standing) => ({
                         position: parseInt(standing.position),
-                        driver_number: driverNumber,
-                        full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
-                        name_acronym: standing.Driver.code,
-                        team_name: standing.Constructors[0]?.name || "Unknown",
-                        team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
-                        headshot_url: headshotMap.get(driverNumber) || "",
-                        points: parseInt(standing.points),
+                        team_name: standing.Constructor.name,
+                        team_colour: this.getTeamColour(standing.Constructor.constructorId),
+                        points: parseFloat(standing.points),
                         wins: parseInt(standing.wins),
-                    };
-                });
-                await this.setStateAsync("standings.drivers", {
-                    val: JSON.stringify(drivers, null, 2),
-                    ack: true,
-                });
+                    }));
+                    await this.setStateAsync("standings.teams", { val: JSON.stringify(teams, null, 2), ack: true });
+                }
+                await this.setStateAsync("standings.last_update", { val: new Date().toISOString(), ack: true });
+                this.log.debug("Updated standings from Ergast API");
+                return; // success — no more retries
             }
-            if (constructorStandings.length > 0) {
-                // Transform constructor data
-                const teams = constructorStandings.map((standing) => ({
-                    position: parseInt(standing.position),
-                    team_name: standing.Constructor.name,
-                    points: parseInt(standing.points),
-                    wins: parseInt(standing.wins),
-                }));
-                await this.setStateAsync("standings.teams", {
-                    val: JSON.stringify(teams, null, 2),
-                    ack: true,
-                });
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                if (attempt < 2) {
+                    this.log.warn(`Standings fetch failed (attempt ${attempt + 1}/3): ${message}. Retrying in ${delays[attempt] / 1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+                }
+                else {
+                    this.log.error(`Failed to update standings after 3 attempts: ${message}`);
+                }
             }
-            await this.setStateAsync("standings.last_update", {
-                val: new Date().toISOString(),
-                ack: true,
-            });
-            this.log.debug("Updated standings from Ergast API + OpenF1 headshots");
         }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.log.error(`Failed to update standings: ${message}`);
+    }
+    async updateStandingsIfNeeded() {
+        const lastUpdateState = await this.getStateAsync("standings.last_update");
+        const lastUpdate = lastUpdateState?.val;
+        if (!lastUpdate) {
+            this.log.debug("No standings data yet, fetching...");
+            await this.updateStandings();
+            return;
+        }
+        const ageMs = Date.now() - new Date(lastUpdate).getTime();
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        if (ageMs > sevenDaysMs) {
+            this.log.debug("Standings older than 7 days, refreshing...");
+            await this.updateStandings();
         }
     }
     getTeamColour(constructorId) {
@@ -623,6 +685,85 @@ class F1 extends utils.Adapter {
             kick_sauber: "FF0000",
         };
         return colours[constructorId] || "FFFFFF";
+    }
+    getSessionResultStateId(sessionName) {
+        const mapping = {
+            "Practice 1": "fp1",
+            "Practice 2": "fp2",
+            "Practice 3": "fp3",
+            "Sprint Shootout": "sprint_qualifying",
+            Sprint: "sprint",
+            Qualifying: "qualifying",
+            Race: "race",
+        };
+        return mapping[sessionName] ?? null;
+    }
+    async updateSessionResults(sessionKey, sessionName) {
+        const stateId = this.getSessionResultStateId(sessionName);
+        if (!stateId) {
+            this.log.debug(`No result state mapping for session: ${sessionName}`);
+            return;
+        }
+        try {
+            const [lapsResponse, driversResponse] = await Promise.all([
+                this.api.get("/laps", { params: { session_key: sessionKey } }),
+                this.api.get("/drivers", { params: { session_key: sessionKey } }),
+            ]);
+            const laps = lapsResponse.data ?? [];
+            const drivers = driversResponse.data ?? [];
+            if (laps.length === 0) {
+                this.log.debug(`No lap data for session ${sessionName} (key: ${sessionKey})`);
+                return;
+            }
+            // Calculate best lap time and lap count per driver
+            // Exclude pit-out laps (not representative timing)
+            const driverStats = new Map();
+            for (const lap of laps) {
+                const existing = driverStats.get(lap.driver_number) ?? { best: null, count: 0 };
+                const lapTime = lap.lap_duration > 0 && !lap.is_pit_out_lap ? lap.lap_duration : null;
+                const newBest = lapTime !== null && (existing.best === null || lapTime < existing.best) ? lapTime : existing.best;
+                driverStats.set(lap.driver_number, { best: newBest, count: existing.count + 1 });
+            }
+            // Build result array sorted by best lap time
+            const results = Array.from(driverStats.entries())
+                .map(([driverNumber, stats]) => {
+                const driver = drivers.find(d => d.driver_number === driverNumber);
+                return {
+                    position: 0,
+                    driver_number: driverNumber,
+                    name_acronym: driver?.name_acronym ?? String(driverNumber),
+                    full_name: driver?.full_name ?? String(driverNumber),
+                    team_name: driver?.team_name ?? "",
+                    team_colour: driver?.team_colour ?? "FFFFFF",
+                    best_lap_time: stats.best,
+                    lap_count: stats.count,
+                };
+            })
+                .sort((a, b) => {
+                if (a.best_lap_time === null) {
+                    return 1;
+                }
+                if (b.best_lap_time === null) {
+                    return -1;
+                }
+                return a.best_lap_time - b.best_lap_time;
+            })
+                .map((entry, index) => ({ ...entry, position: index + 1 }));
+            await this.setStateAsync(`session_results.${stateId}`, {
+                val: JSON.stringify(results, null, 2),
+                ack: true,
+            });
+            await this.setStateAsync("session_results.last_update", {
+                val: new Date().toISOString(),
+                ack: true,
+            });
+            this.lastCompletedSessionKey = sessionKey;
+            this.log.info(`Saved results for session: ${sessionName}`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.log.error(`Failed to update session results for ${sessionName}: ${message}`);
+        }
     }
     async updateLiveSession() {
         if (!this.currentSessionKey) {
@@ -709,8 +850,7 @@ class F1 extends utils.Adapter {
             });
             if (posResponse.data && posResponse.data.length > 0) {
                 // Keep newest entry per driver
-                const sorted = posResponse.data
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const sorted = posResponse.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 const seen = new Set();
                 const latestPositions = [];
                 for (const entry of sorted) {
@@ -948,77 +1088,6 @@ class F1 extends utils.Adapter {
         }
         catch {
             this.log.debug("Failed to update car locations");
-        }
-    }
-    /**
-     * Get next session (any type: Practice, Qualifying, Sprint, Race)
-     */
-    async getNextSession() {
-        try {
-            const now = new Date();
-            const year = now.getFullYear();
-            const response = await this.api.get("/sessions", {
-                params: { year: year },
-            });
-            if (response.data && response.data.length > 0) {
-                const futureSessions = response.data.filter((session) => new Date(session.date_start) > now);
-                if (futureSessions.length > 0) {
-                    return futureSessions.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime())[0];
-                }
-            }
-            return null;
-        }
-        catch {
-            this.log.error("Failed to fetch next session");
-            return null;
-        }
-    }
-    /**
-     * Get all sessions for the next race weekend
-     */
-    async getWeekendSessions() {
-        try {
-            const now = new Date();
-            const year = now.getFullYear();
-            // Get all sessions for the year
-            const response = await this.api.get("/sessions", {
-                params: { year: year },
-            });
-            if (!response.data || response.data.length === 0) {
-                return null;
-            }
-            // Filter future sessions
-            const futureSessions = response.data.filter((session) => new Date(session.date_start) > now);
-            if (futureSessions.length === 0) {
-                return null;
-            }
-            // Sort by date
-            futureSessions.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
-            // Group by circuit (sessions within 7 days = same weekend)
-            const firstSession = futureSessions[0];
-            const firstSessionDate = new Date(firstSession.date_start);
-            const weekendEnd = new Date(firstSessionDate);
-            weekendEnd.setDate(weekendEnd.getDate() + 7);
-            const weekendSessionsList = futureSessions.filter((session) => {
-                const sessionDate = new Date(session.date_start);
-                return (session.circuit_short_name === firstSession.circuit_short_name &&
-                    sessionDate >= firstSessionDate &&
-                    sessionDate <= weekendEnd);
-            });
-            // Find next session index
-            const nextSessionIndex = 0; // First session is always next
-            return {
-                circuit: firstSession.circuit_short_name,
-                country: firstSession.country_name,
-                location: firstSession.location,
-                year: firstSession.year,
-                sessions: weekendSessionsList,
-                next_session_index: nextSessionIndex,
-            };
-        }
-        catch {
-            this.log.error("Failed to fetch weekend sessions");
-            return null;
         }
     }
     /**

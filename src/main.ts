@@ -123,6 +123,18 @@ interface Location {
 	z: number;
 }
 
+interface SessionResultEntry {
+	position: number;
+	driver_number: number;
+	name_acronym: string;
+	full_name: string;
+	team_name: string;
+	team_colour: string;
+	best_lap_time: number | null;
+	lap_count: number;
+	status?: string;
+}
+
 class F1 extends utils.Adapter {
 	private readonly ERGAST_DRIVER_STANDINGS_URL =
 		"https://api.jolpi.ca/ergast/f1/current/driverstandings.json?limit=100";
@@ -134,6 +146,8 @@ class F1 extends utils.Adapter {
 	private currentPollingMode: "race" | "normal" = "normal";
 	private currentSessionKey?: number;
 	private isFetching: boolean = false;
+	private lastCompletedSessionKey?: number;
+	private lastLiveSessionStatus: string = "no_session";
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
@@ -858,6 +872,94 @@ class F1 extends utils.Adapter {
 		};
 		return colours[constructorId] || "FFFFFF";
 	}
+	private getSessionResultStateId(sessionName: string): string | null {
+		const mapping: Record<string, string> = {
+			"Practice 1": "fp1",
+			"Practice 2": "fp2",
+			"Practice 3": "fp3",
+			"Sprint Shootout": "sprint_qualifying",
+			Sprint: "sprint",
+			Qualifying: "qualifying",
+			Race: "race",
+		};
+		return mapping[sessionName] ?? null;
+	}
+
+	private async updateSessionResults(sessionKey: number, sessionName: string): Promise<void> {
+		const stateId = this.getSessionResultStateId(sessionName);
+		if (!stateId) {
+			this.log.debug(`No result state mapping for session: ${sessionName}`);
+			return;
+		}
+
+		try {
+			const [lapsResponse, driversResponse] = await Promise.all([
+				this.api.get<Lap[]>("/laps", { params: { session_key: sessionKey } }),
+				this.api.get<Driver[]>("/drivers", { params: { session_key: sessionKey } }),
+			]);
+
+			const laps: Lap[] = lapsResponse.data ?? [];
+			const drivers: Driver[] = driversResponse.data ?? [];
+
+			if (laps.length === 0) {
+				this.log.debug(`No lap data for session ${sessionName} (key: ${sessionKey})`);
+				return;
+			}
+
+			// Calculate best lap time and lap count per driver
+			// Exclude pit-out laps (not representative timing)
+			const driverStats = new Map<number, { best: number | null; count: number }>();
+			for (const lap of laps) {
+				const existing = driverStats.get(lap.driver_number) ?? { best: null, count: 0 };
+				const lapTime = lap.lap_duration > 0 && !lap.is_pit_out_lap ? lap.lap_duration : null;
+				const newBest =
+					lapTime !== null && (existing.best === null || lapTime < existing.best) ? lapTime : existing.best;
+				driverStats.set(lap.driver_number, { best: newBest, count: existing.count + 1 });
+			}
+
+			// Build result array sorted by best lap time
+			const results: SessionResultEntry[] = Array.from(driverStats.entries())
+				.map(([driverNumber, stats]) => {
+					const driver = drivers.find(d => d.driver_number === driverNumber);
+					return {
+						position: 0,
+						driver_number: driverNumber,
+						name_acronym: driver?.name_acronym ?? String(driverNumber),
+						full_name: driver?.full_name ?? String(driverNumber),
+						team_name: driver?.team_name ?? "",
+						team_colour: driver?.team_colour ?? "FFFFFF",
+						best_lap_time: stats.best,
+						lap_count: stats.count,
+					};
+				})
+				.sort((a, b) => {
+					if (a.best_lap_time === null) {
+						return 1;
+					}
+					if (b.best_lap_time === null) {
+						return -1;
+					}
+					return a.best_lap_time - b.best_lap_time;
+				})
+				.map((entry, index) => ({ ...entry, position: index + 1 }));
+
+			await this.setStateAsync(`session_results.${stateId}`, {
+				val: JSON.stringify(results, null, 2),
+				ack: true,
+			});
+			await this.setStateAsync("session_results.last_update", {
+				val: new Date().toISOString(),
+				ack: true,
+			});
+
+			this.lastCompletedSessionKey = sessionKey;
+			this.log.info(`Saved results for session: ${sessionName}`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			this.log.error(`Failed to update session results for ${sessionName}: ${message}`);
+		}
+	}
+
 	private async updateLiveSession(): Promise<void> {
 		if (!this.currentSessionKey) {
 			return;
