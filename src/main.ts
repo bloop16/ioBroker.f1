@@ -612,17 +612,19 @@ class F1 extends utils.Adapter {
 		try {
 			this.log.debug("Fetching data from OpenF1 API...");
 
-			const nextRace = await this.getNextRace();
+			const now = new Date();
+			const allSessions = await this.fetchAllSessionsForYear(now.getFullYear());
+
+			const nextRace = this.findNextRace(allSessions, now);
 			if (nextRace) {
 				await this.updateNextRaceStates(nextRace);
 
-				// Fetch next session (any type) and weekend sessions
-				const nextSession = await this.getNextSession();
+				const nextSession = this.findNextSession(allSessions, now);
 				if (nextSession) {
 					await this.updateNextSession(nextSession);
 				}
 
-				const weekendSessions: WeekendSessions | null = await this.getWeekendSessions();
+				const weekendSessions = this.buildWeekendSessions(allSessions, now);
 				if (weekendSessions) {
 					await this.updateWeekendSessions(weekendSessions);
 				}
@@ -657,30 +659,51 @@ class F1 extends utils.Adapter {
 		}
 	}
 
-	private async getNextRace(): Promise<NextRace | null> {
-		try {
-			const now = new Date();
-			const year = now.getFullYear();
+	private async fetchAllSessionsForYear(year: number): Promise<NextRace[]> {
+		const response = await this.api.get<NextRace[]>("/sessions", {
+			params: { year },
+		});
+		return response.data ?? [];
+	}
 
-			const response = await this.api.get<NextRace[]>("/sessions", {
-				params: { session_name: "Race", year: year },
-			});
+	private findNextRace(sessions: NextRace[], now: Date): NextRace | null {
+		const futureRaces = sessions
+			.filter(s => s.session_name === "Race" && new Date(s.date_start) > now)
+			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+		return futureRaces[0] ?? null;
+	}
 
-			if (response.data && response.data.length > 0) {
-				const futureRaces = response.data.filter((race: NextRace) => new Date(race.date_start) > now);
+	private findNextSession(sessions: NextRace[], now: Date): NextRace | null {
+		const future = sessions
+			.filter(s => new Date(s.date_start) > now)
+			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+		return future[0] ?? null;
+	}
 
-				if (futureRaces.length > 0) {
-					return futureRaces.sort(
-						(a: NextRace, b: NextRace) =>
-							new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
-					)[0];
-				}
-			}
-			return null;
-		} catch {
-			this.log.error("Failed to get next race");
+	private buildWeekendSessions(sessions: NextRace[], now: Date): WeekendSessions | null {
+		const future = sessions
+			.filter(s => new Date(s.date_start) > now)
+			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
+
+		if (future.length === 0) {
 			return null;
 		}
+
+		const first = future[0];
+		const weekendEnd = new Date(new Date(first.date_start).getTime() + 7 * 24 * 60 * 60 * 1000);
+
+		const weekendList = future.filter(
+			s => s.circuit_short_name === first.circuit_short_name && new Date(s.date_start) <= weekendEnd,
+		);
+
+		return {
+			circuit: first.circuit_short_name,
+			country: first.country_name,
+			location: first.location,
+			year: first.year,
+			sessions: weekendList,
+			next_session_index: 0,
+		};
 	}
 
 	private async updateNextRaceStates(race: NextRace): Promise<void> {
@@ -1155,96 +1178,6 @@ class F1 extends utils.Adapter {
 			}
 		} catch {
 			this.log.debug("Failed to update car locations");
-		}
-	}
-
-	/**
-	 * Get next session (any type: Practice, Qualifying, Sprint, Race)
-	 */
-	private async getNextSession(): Promise<NextRace | null> {
-		try {
-			const now = new Date();
-			const year = now.getFullYear();
-
-			const response = await this.api.get<NextRace[]>("/sessions", {
-				params: { year: year },
-			});
-
-			if (response.data && response.data.length > 0) {
-				const futureSessions = response.data.filter((session: NextRace) => new Date(session.date_start) > now);
-
-				if (futureSessions.length > 0) {
-					return futureSessions.sort(
-						(a: NextRace, b: NextRace) =>
-							new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
-					)[0];
-				}
-			}
-			return null;
-		} catch {
-			this.log.error("Failed to fetch next session");
-			return null;
-		}
-	}
-
-	/**
-	 * Get all sessions for the next race weekend
-	 */
-	private async getWeekendSessions(): Promise<WeekendSessions | null> {
-		try {
-			const now = new Date();
-			const year = now.getFullYear();
-
-			// Get all sessions for the year
-			const response = await this.api.get<NextRace[]>("/sessions", {
-				params: { year: year },
-			});
-
-			if (!response.data || response.data.length === 0) {
-				return null;
-			}
-
-			// Filter future sessions
-			const futureSessions = response.data.filter((session: NextRace) => new Date(session.date_start) > now);
-
-			if (futureSessions.length === 0) {
-				return null;
-			}
-
-			// Sort by date
-			futureSessions.sort(
-				(a: NextRace, b: NextRace) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
-			);
-
-			// Group by circuit (sessions within 7 days = same weekend)
-			const firstSession = futureSessions[0];
-			const firstSessionDate = new Date(firstSession.date_start);
-			const weekendEnd = new Date(firstSessionDate);
-			weekendEnd.setDate(weekendEnd.getDate() + 7);
-
-			const weekendSessionsList = futureSessions.filter((session: NextRace) => {
-				const sessionDate = new Date(session.date_start);
-				return (
-					session.circuit_short_name === firstSession.circuit_short_name &&
-					sessionDate >= firstSessionDate &&
-					sessionDate <= weekendEnd
-				);
-			});
-
-			// Find next session index
-			const nextSessionIndex = 0; // First session is always next
-
-			return {
-				circuit: firstSession.circuit_short_name,
-				country: firstSession.country_name,
-				location: firstSession.location,
-				year: firstSession.year,
-				sessions: weekendSessionsList,
-				next_session_index: nextSessionIndex,
-			};
-		} catch {
-			this.log.error("Failed to fetch weekend sessions");
-			return null;
 		}
 	}
 
