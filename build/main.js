@@ -708,10 +708,18 @@ class F1 extends utils.Adapter {
                 },
             });
             if (posResponse.data && posResponse.data.length > 0) {
-                const latestPositions = posResponse.data
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 20)
-                    .sort((a, b) => a.position - b.position);
+                // Keep newest entry per driver
+                const sorted = posResponse.data
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const seen = new Set();
+                const latestPositions = [];
+                for (const entry of sorted) {
+                    if (!seen.has(entry.driver_number)) {
+                        seen.add(entry.driver_number);
+                        latestPositions.push(entry);
+                    }
+                }
+                latestPositions.sort((a, b) => a.position - b.position);
                 await this.setStateAsync("positions.current", {
                     val: JSON.stringify(latestPositions, null, 2),
                     ack: true,
