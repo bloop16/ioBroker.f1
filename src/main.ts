@@ -682,7 +682,7 @@ class F1 extends utils.Adapter {
 				}
 			}
 
-			await this.updateStandingsIfNeeded();
+			void this.updateStandingsIfNeeded();
 
 			if (this.currentSessionKey) {
 				await this.updateLiveSession();
@@ -995,10 +995,16 @@ class F1 extends utils.Adapter {
 					this.log.info(`Session finished: ${session.session_name}. Saving results...`);
 					await this.updateSessionResults(session.session_key, session.session_name);
 					if (session.session_name === "Race") {
-						await this.updateStandings();
+						void this.updateStandings();
 					}
+					// Only advance status if results were saved (lastCompletedSessionKey updated)
+					// If save failed, keep "active" so next cycle retries the trigger
+					if (this.lastCompletedSessionKey === session.session_key) {
+						this.lastLiveSessionStatus = status;
+					}
+				} else {
+					this.lastLiveSessionStatus = status;
 				}
-				this.lastLiveSessionStatus = status;
 
 				await this.setStateAsync("live_session.type", { val: session.session_name, ack: true });
 			}
