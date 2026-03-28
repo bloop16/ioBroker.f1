@@ -986,6 +986,20 @@ class F1 extends utils.Adapter {
 				}
 
 				await this.setStateAsync("live_session.status", { val: status, ack: true });
+
+				if (
+					this.lastLiveSessionStatus === "active" &&
+					status === "finished" &&
+					session.session_key !== this.lastCompletedSessionKey
+				) {
+					this.log.info(`Session finished: ${session.session_name}. Saving results...`);
+					await this.updateSessionResults(session.session_key, session.session_name);
+					if (session.session_name === "Race") {
+						await this.updateStandings();
+					}
+				}
+				this.lastLiveSessionStatus = status;
+
 				await this.setStateAsync("live_session.type", { val: session.session_name, ack: true });
 			}
 
