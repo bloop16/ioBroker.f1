@@ -45,6 +45,7 @@ class F1 extends utils.Adapter {
     api;
     currentPollingMode = "normal";
     currentSessionKey;
+    isFetching = false;
     constructor(options = {}) {
         super({
             ...options,
@@ -63,8 +64,8 @@ class F1 extends utils.Adapter {
         this.log.info("Starting F1 adapter...");
         await this.initializeStates();
         await this.setStateAsync("info.connection", { val: false, ack: true });
-        await this.fetchData();
         await this.updatePollingInterval();
+        await this.fetchData();
     }
     async updatePollingInterval() {
         if (this.updateInterval) {
@@ -131,6 +132,7 @@ class F1 extends utils.Adapter {
         }
         catch {
             this.log.debug("Failed to check active session");
+            this.currentSessionKey = undefined; // reset stale key on error
             return false;
         }
     }
@@ -461,6 +463,11 @@ class F1 extends utils.Adapter {
         }
     }
     async fetchData() {
+        if (this.isFetching) {
+            this.log.debug("Fetch already running, skipping cycle");
+            return;
+        }
+        this.isFetching = true;
         try {
             this.log.debug("Fetching data from OpenF1 API...");
             const nextRace = await this.getNextRace();
@@ -499,6 +506,9 @@ class F1 extends utils.Adapter {
         catch {
             this.log.error("Failed to fetch data");
             await this.setStateAsync("info.connection", { val: false, ack: true });
+        }
+        finally {
+            this.isFetching = false;
         }
     }
     async getNextRace() {

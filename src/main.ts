@@ -233,6 +233,7 @@ class F1 extends utils.Adapter {
 			return false;
 		} catch {
 			this.log.debug("Failed to check active session");
+			this.currentSessionKey = undefined; // reset stale key on error
 			return false;
 		}
 	}
