@@ -132,6 +132,7 @@ class F1 extends utils.Adapter {
 	private api: ReturnType<typeof axios.create>;
 	private currentPollingMode: "race" | "normal" = "normal";
 	private currentSessionKey?: number;
+	private isFetching: boolean = false;
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
@@ -602,6 +603,11 @@ class F1 extends utils.Adapter {
 	}
 
 	private async fetchData(): Promise<void> {
+		if (this.isFetching) {
+			this.log.debug("Fetch already running, skipping cycle");
+			return;
+		}
+		this.isFetching = true;
 		try {
 			this.log.debug("Fetching data from OpenF1 API...");
 
@@ -645,6 +651,8 @@ class F1 extends utils.Adapter {
 		} catch {
 			this.log.error("Failed to fetch data");
 			await this.setStateAsync("info.connection", { val: false, ack: true });
+		} finally {
+			this.isFetching = false;
 		}
 	}
 
