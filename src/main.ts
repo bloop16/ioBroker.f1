@@ -154,8 +154,8 @@ class F1 extends utils.Adapter {
 		this.log.info("Starting F1 adapter...");
 		await this.initializeStates();
 		await this.setStateAsync("info.connection", { val: false, ack: true });
-		await this.fetchData();
 		await this.updatePollingInterval();
+		await this.fetchData();
 	}
 
 	private async updatePollingInterval(): Promise<void> {
