@@ -1040,7 +1040,7 @@ class F1 extends utils.Adapter {
             await this.setStateAsync("next_session.country", { val: session.country_name, ack: true });
             await this.setStateAsync("next_session.location", { val: session.location, ack: true });
             await this.setStateAsync("next_session.date_start", { val: session.date_start, ack: true });
-            const daysUntil = Math.floor((new Date(session.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            const daysUntil = Math.ceil((new Date(session.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
             await this.setStateAsync("next_session.countdown_days", { val: daysUntil, ack: true });
             await this.setStateAsync("next_session.json", { val: JSON.stringify(session), ack: true });
         }
