@@ -130,6 +130,7 @@ class F1 extends utils.Adapter {
 		"https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
 	private updateInterval?: NodeJS.Timeout;
 	private api: ReturnType<typeof axios.create>;
+	private ergastApi: ReturnType<typeof axios.create>;
 	private currentPollingMode: "race" | "normal" = "normal";
 	private currentSessionKey?: number;
 	private isFetching: boolean = false;
@@ -142,6 +143,11 @@ class F1 extends utils.Adapter {
 
 		this.api = axios.create({
 			baseURL: "https://api.openf1.org/v1",
+			timeout: 10000,
+			headers: { "User-Agent": "ioBroker.f1" },
+		});
+
+		this.ergastApi = axios.create({
 			timeout: 10000,
 			headers: { "User-Agent": "ioBroker.f1" },
 		});
@@ -630,7 +636,7 @@ class F1 extends utils.Adapter {
 				}
 			}
 
-			await this.updateStandings();
+			await this.updateStandingsIfNeeded();
 
 			if (this.currentSessionKey) {
 				await this.updateLiveSession();
@@ -718,78 +724,88 @@ class F1 extends utils.Adapter {
 	}
 
 	private async updateStandings(): Promise<void> {
-		try {
-			// Fetch driver standings from Ergast API
-			const driverResponse: any = await axios.get(this.ERGAST_DRIVER_STANDINGS_URL);
-			const driverStandings =
-				driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
+		const delays = [5000, 15000, 45000];
 
-			// Fetch constructor standings from Ergast API
-			const constructorResponse: any = await axios.get(this.ERGAST_CONSTRUCTOR_STANDINGS_URL);
-			const constructorStandings =
-				constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
+		for (let attempt = 0; attempt < 3; attempt++) {
+			try {
+				const [driverResponse, constructorResponse] = await Promise.all([
+					this.ergastApi.get<any>(this.ERGAST_DRIVER_STANDINGS_URL),
+					this.ergastApi.get<any>(this.ERGAST_CONSTRUCTOR_STANDINGS_URL),
+				]);
 
-			if (driverStandings.length > 0) {
-				// Fetch driver details from OpenF1 for headshot URLs
-				const openF1Response = await this.api.get<Driver[]>("/drivers", {
-					params: { session_key: "latest" },
-				});
-				const openF1Drivers = openF1Response.data || [];
+				const driverStandings =
+					driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings ?? [];
+				const constructorStandings =
+					constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings ?? [];
 
-				// Create lookup map by driver number
-				const headshotMap = new Map<number, string>();
-				openF1Drivers.forEach((driver: Driver) => {
-					if (driver.headshot_url) {
-						headshotMap.set(driver.driver_number, driver.headshot_url);
-					}
-				});
+				if (driverStandings.length > 0) {
+					const openF1Response = await this.api.get<Driver[]>("/drivers", {
+						params: { session_key: "latest" },
+					});
+					const openF1Drivers: Driver[] = openF1Response.data ?? [];
 
-				// Transform Ergast data to our format
-				const drivers = driverStandings.map((standing: any) => {
-					const driverNumber = parseInt(standing.Driver.permanentNumber);
-					return {
+					const drivers = driverStandings.map((standing: any) => {
+						const driverNumber = parseInt(standing.Driver.permanentNumber);
+						const openF1Driver = openF1Drivers.find(d => d.driver_number === driverNumber);
+						return {
+							position: parseInt(standing.position),
+							driver_number: driverNumber,
+							full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
+							name_acronym: standing.Driver.code ?? "",
+							team_name: standing.Constructors?.[0]?.name ?? "",
+							team_colour: this.getTeamColour(standing.Constructors?.[0]?.constructorId ?? ""),
+							points: parseFloat(standing.points),
+							wins: parseInt(standing.wins),
+							headshot_url: openF1Driver?.headshot_url ?? "",
+						};
+					});
+
+					await this.setStateAsync("standings.drivers", { val: JSON.stringify(drivers, null, 2), ack: true });
+				}
+
+				if (constructorStandings.length > 0) {
+					const teams = constructorStandings.map((standing: any) => ({
 						position: parseInt(standing.position),
-						driver_number: driverNumber,
-						full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
-						name_acronym: standing.Driver.code,
-						team_name: standing.Constructors[0]?.name || "Unknown",
-						team_colour: this.getTeamColour(standing.Constructors[0]?.constructorId),
-						headshot_url: headshotMap.get(driverNumber) || "",
-						points: parseInt(standing.points),
+						team_name: standing.Constructor.name,
+						team_colour: this.getTeamColour(standing.Constructor.constructorId),
+						points: parseFloat(standing.points),
 						wins: parseInt(standing.wins),
-					};
-				});
+					}));
+					await this.setStateAsync("standings.teams", { val: JSON.stringify(teams, null, 2), ack: true });
+				}
 
-				await this.setStateAsync("standings.drivers", {
-					val: JSON.stringify(drivers, null, 2),
-					ack: true,
-				});
+				await this.setStateAsync("standings.last_update", { val: new Date().toISOString(), ack: true });
+				this.log.debug("Updated standings from Ergast API");
+				return; // success — no more retries
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				if (attempt < 2) {
+					this.log.warn(
+						`Standings fetch failed (attempt ${attempt + 1}/3): ${message}. Retrying in ${delays[attempt] / 1000}s...`,
+					);
+					await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+				} else {
+					this.log.error(`Failed to update standings after 3 attempts: ${message}`);
+				}
 			}
+		}
+	}
 
-			if (constructorStandings.length > 0) {
-				// Transform constructor data
-				const teams = constructorStandings.map((standing: any) => ({
-					position: parseInt(standing.position),
-					team_name: standing.Constructor.name,
-					points: parseInt(standing.points),
-					wins: parseInt(standing.wins),
-				}));
+	private async updateStandingsIfNeeded(): Promise<void> {
+		const lastUpdateState = await this.getStateAsync("standings.last_update");
+		const lastUpdate = lastUpdateState?.val as string | null;
 
-				await this.setStateAsync("standings.teams", {
-					val: JSON.stringify(teams, null, 2),
-					ack: true,
-				});
-			}
+		if (!lastUpdate) {
+			this.log.debug("No standings data yet, fetching...");
+			await this.updateStandings();
+			return;
+		}
 
-			await this.setStateAsync("standings.last_update", {
-				val: new Date().toISOString(),
-				ack: true,
-			});
-
-			this.log.debug("Updated standings from Ergast API + OpenF1 headshots");
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			this.log.error(`Failed to update standings: ${message}`);
+		const ageMs = Date.now() - new Date(lastUpdate).getTime();
+		const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+		if (ageMs > sevenDaysMs) {
+			this.log.debug("Standings older than 7 days, refreshing...");
+			await this.updateStandings();
 		}
 	}
 	private getTeamColour(constructorId: string): string {
@@ -906,8 +922,7 @@ class F1 extends utils.Adapter {
 
 			if (posResponse.data && posResponse.data.length > 0) {
 				// Keep newest entry per driver
-				const sorted = posResponse.data
-					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+				const sorted = posResponse.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 				const seen = new Set<number>();
 				const latestPositions: Position[] = [];
