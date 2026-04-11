@@ -1,127 +1,43 @@
 import * as utils from "@iobroker/adapter-core";
 import axios from "axios";
+import WebSocket from "ws";
 
-interface NextRace {
-	session_key: number;
-	session_name: string;
-	session_type: string;
-	date_start: string;
-	date_end: string;
-	circuit_short_name: string;
-	country_name: string;
-	location: string;
-	year: number;
+// ── Jolpica / Schedule interfaces ─────────────────────────────────────────────
+
+interface JolpiaSessionTime {
+	date: string;
+	time: string;
 }
 
-interface Driver {
-	driver_number: number;
-	full_name: string;
-	name_acronym: string;
-	team_name: string;
-	team_colour: string;
-	headshot_url: string;
+interface JolpiaRaceEntry {
+	round: string;
+	raceName: string;
+	Circuit: {
+		circuitName: string;
+		Location: { locality: string; country: string };
+	};
+	date: string;
+	time: string;
+	FirstPractice?: JolpiaSessionTime;
+	SecondPractice?: JolpiaSessionTime;
+	ThirdPractice?: JolpiaSessionTime;
+	Qualifying?: JolpiaSessionTime;
+	Sprint?: JolpiaSessionTime;
+	SprintQualifying?: JolpiaSessionTime;
 }
 
-interface Session {
-	session_key: number;
-	session_name: string;
-	session_type: string;
-	date_start: string;
-	date_end: string;
-}
-
-interface WeekendSessions {
+interface ScheduleSession {
+	name: string;
+	type: string;
+	startUTC: string;
+	endUTC: string;
+	round: number;
+	raceName: string;
 	circuit: string;
 	country: string;
-	location: string;
-	year: number;
-	sessions: NextRace[];
-	next_session_index: number;
 }
 
-interface Weather {
-	air_temperature: number;
-	humidity: number;
-	pressure: number;
-	rainfall: number;
-	track_temperature: number;
-	wind_direction: number;
-	wind_speed: number;
-}
-
-interface RaceControlMessage {
-	date: string;
-	lap_number: number;
-	message: string;
-	category: string;
-	flag: string;
-}
-
-interface Position {
-	driver_number: number;
-	position: number;
-	date: string;
-}
-
-interface Lap {
-	driver_number: number;
-	lap_number: number;
-	lap_duration: number;
-	is_pit_out_lap: boolean;
-	sector_1_duration: number;
-	sector_2_duration: number;
-	sector_3_duration: number;
-	i1_speed: number;
-	i2_speed: number;
-	st_speed: number;
-}
-
-interface Interval {
-	driver_number: number;
-	gap_to_leader: number;
-	interval: number;
-}
-
-interface PitStop {
-	driver_number: number;
-	lap_number: number;
-	pit_duration: number;
-	date: string;
-}
-
-interface Stint {
-	driver_number: number;
-	stint_number: number;
-	lap_start: number;
-	lap_end: number;
-	compound: string;
-	tyre_age_at_start: number;
-}
-
-interface Radio {
-	driver_number: number;
-	date: string;
-	recording_url: string;
-}
-
-interface CarData {
-	driver_number: number;
-	date: string;
-	speed: number;
-	throttle: number;
-	brake: number;
-	gear: number;
-	rpm: number;
-	drs: number;
-}
-
-interface Location {
-	driver_number: number;
-	date: string;
-	x: number;
-	y: number;
-	z: number;
-}
+// ── Result interfaces ──────────────────────────────────────────────────────────
 
 interface SessionResultEntry {
 	position: number;
@@ -133,37 +49,141 @@ interface SessionResultEntry {
 	best_lap_time: number | null;
 	lap_count: number;
 	status?: string;
+	q1?: string;
+	q2?: string;
+	q3?: string;
+	race_name?: string;
+	round?: number;
 }
 
+interface JolpiaRaceResult {
+	position: string;
+	positionText: string;
+	number: string;
+	Driver: { permanentNumber: string; code: string; givenName: string; familyName: string };
+	Constructor: { constructorId: string; name: string };
+	status: string;
+	laps: string;
+	FastestLap?: { Time?: { time?: string } };
+}
+
+interface JolpiaQualifyingResult {
+	position: string;
+	number: string;
+	Driver: { permanentNumber: string; code: string; givenName: string; familyName: string };
+	Constructor: { constructorId: string; name: string };
+	Q1?: string;
+	Q2?: string;
+	Q3?: string;
+}
+
+interface JolpiaSprintResult {
+	position: string;
+	positionText: string;
+	number: string;
+	Driver: { permanentNumber: string; code: string; givenName: string; familyName: string };
+	Constructor: { constructorId: string; name: string };
+	status: string;
+	laps: string;
+}
+
+interface JolpiaPracticeResult {
+	position: string;
+	number: string;
+	Driver: { permanentNumber: string; code: string; givenName: string; familyName: string };
+	Constructor: { constructorId: string; name: string };
+	time?: string;
+	laps: string;
+}
+
+interface StateDefinition {
+	id: string;
+	name: string;
+	type: string;
+	role: string;
+	unit?: string;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const SUBSCRIBE_STREAMS = [
+	"TrackStatus",
+	"SessionStatus",
+	"SessionInfo",
+	"WeatherData",
+	"LapCount",
+	"ExtrapolatedClock",
+	"TimingData",
+	"DriverList",
+	"TimingAppData",
+	"RaceControlMessages",
+	"TopThree",
+	"TeamRadio",
+	"PitStopSeries",
+	"TyreStintSeries",
+];
+
+const SESSION_DURATIONS: Record<string, number> = {
+	"Practice 1": 60,
+	"Practice 2": 60,
+	"Practice 3": 60,
+	Qualifying: 60,
+	"Sprint Qualifying": 45,
+	Sprint: 45,
+	Race: 120,
+};
+
+const TRACK_STATUS_MAP: Record<string, string> = {
+	1: "AllClear",
+	2: "Yellow",
+	3: "Flag",
+	4: "SafetyCar",
+	5: "RedFlag",
+	6: "VSCDeployed",
+	7: "VSCEnding",
+	8: "SafetyCarEnding",
+};
+
+// ── Adapter class ─────────────────────────────────────────────────────────────
+
 class F1 extends utils.Adapter {
-	private readonly ERGAST_DRIVER_STANDINGS_URL =
-		"https://api.jolpi.ca/ergast/f1/current/driverstandings.json?limit=100";
-	private readonly ERGAST_CONSTRUCTOR_STANDINGS_URL =
-		"https://api.jolpi.ca/ergast/f1/current/constructorstandings.json?limit=100";
-	private updateInterval?: NodeJS.Timeout;
-	private api: ReturnType<typeof axios.create>;
+	private readonly JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1";
+	private readonly ERGAST_BASE = "https://ergast.com/api/f1";
+	private readonly SIGNALR_BASE = "https://livetiming.formula1.com/signalr";
+
+	// HTTP clients
 	private ergastApi: ReturnType<typeof axios.create>;
-	private currentPollingMode: "race" | "normal" = "normal";
-	private currentSessionKey?: number;
-	private isFetching: boolean = false;
-	private lastCompletedSessionKey?: number;
-	private lastLiveSessionStatus: string = "no_session";
+	private ltApi: ReturnType<typeof axios.create>;
+
+	// Timers
+	private scheduleInterval?: NodeJS.Timeout;
+	private liveCheckInterval?: NodeJS.Timeout;
+	private reconnectTimeout?: NodeJS.Timeout;
+
+	// Live state
+	private currentLiveSession: ScheduleSession | null = null;
+	private lastSavedSession = "";
+	private ws: WebSocket | null = null;
+	private wsConnecting = false;
+
+	// In-memory SignalR stream caches (merged incrementally)
+	private driverList: Record<string, any> = {};
+	private timingData: Record<string, any> = {};
+	private timingAppData: Record<string, any> = {};
+	private rcMessages: any[] = [];
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
-		super({
-			...options,
-			name: "f1",
-		});
-
-		this.api = axios.create({
-			baseURL: "https://api.openf1.org/v1",
-			timeout: 10000,
-			headers: { "User-Agent": "ioBroker.f1" },
-		});
+		super({ ...options, name: "f1" });
 
 		this.ergastApi = axios.create({
-			timeout: 10000,
-			headers: { "User-Agent": "ioBroker.f1" },
+			timeout: 15000,
+			headers: { "User-Agent": "ioBroker.f1/1.0" },
+		});
+
+		this.ltApi = axios.create({
+			baseURL: "https://livetiming.formula1.com",
+			timeout: 8000,
+			headers: { "User-Agent": "ioBroker.f1/1.0" },
 		});
 
 		this.on("ready", this.onReady.bind(this));
@@ -175,685 +195,959 @@ class F1 extends utils.Adapter {
 		this.log.info("Starting F1 adapter...");
 		await this.initializeStates();
 		await this.setStateAsync("info.connection", { val: false, ack: true });
-		await this.updatePollingInterval();
-		await this.fetchData();
+
+		// Initial full data load
+		await this.refreshJolpicaData();
+
+		// Hourly Jolpica refresh
+		this.scheduleInterval = setInterval(() => void this.refreshJolpicaData(), 60 * 60 * 1000);
+
+		// Live check every 60 seconds
+		await this.checkLiveStatus();
+		this.liveCheckInterval = setInterval(() => void this.checkLiveStatus(), 60 * 1000);
+
+		await this.setStateAsync("info.connection", { val: true, ack: true });
 	}
 
-	private async updatePollingInterval(): Promise<void> {
-		if (this.updateInterval) {
-			clearInterval(this.updateInterval);
-		}
-
-		let interval: number;
-
-		if (this.config.enableDynamicPolling) {
-			const hasActiveSession = await this.checkActiveSession();
-
-			if (hasActiveSession) {
-				interval = (this.config.updateIntervalRace || 10) * 1000;
-				if (this.currentPollingMode !== "race") {
-					this.currentPollingMode = "race";
-					this.log.info("Switching to RACE mode");
-				}
-			} else {
-				interval = (this.config.updateIntervalNormal || 3600) * 1000;
-				if (this.currentPollingMode !== "normal") {
-					this.currentPollingMode = "normal";
-					this.log.info("Switching to NORMAL mode");
-				}
-			}
-		} else {
-			interval = (this.config.updateIntervalNormal || 3600) * 1000;
-		}
-
-		this.updateInterval = setInterval(() => this.fetchData(), interval);
-		this.log.debug("Next update scheduled");
-	}
-
-	private async checkActiveSession(): Promise<boolean> {
-		try {
-			const now = new Date();
-			const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-			const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-
-			const response = await this.api.get<Session[]>("/sessions", {
-				params: {
-					date_start_gte: todayStart.toISOString(),
-					date_start_lte: todayEnd.toISOString(),
-				},
-			});
-
-			if (!response.data || response.data.length === 0) {
-				return false;
-			}
-
-			for (const session of response.data) {
-				const sessionStart = new Date(session.date_start);
-				const sessionEnd = new Date(session.date_end);
-
-				if (now >= sessionStart && now <= sessionEnd) {
-					this.log.debug("Active session detected");
-					this.currentSessionKey = session.session_key;
-					return true;
-				}
-			}
-
-			for (const session of response.data) {
-				const sessionStart = new Date(session.date_start);
-				const minutesUntilStart = (sessionStart.getTime() - now.getTime()) / (1000 * 60);
-
-				if (minutesUntilStart > 0 && minutesUntilStart <= 30) {
-					this.log.debug("Session starting soon");
-					this.currentSessionKey = session.session_key;
-					return true;
-				}
-			}
-
-			this.currentSessionKey = undefined;
-			return false;
-		} catch {
-			this.log.debug("Failed to check active session");
-			this.currentSessionKey = undefined; // reset stale key on error
-			return false;
-		}
-	}
-
-	private async initializeStates(): Promise<void> {
-		// Next Race
-		await this.setObjectNotExistsAsync("next_race", {
-			type: "channel",
-			common: { name: "Next Race Information" },
-			native: {},
-		});
-
-		const raceStates = [
-			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
-			{ id: "country", name: "Country", type: "string", role: "text" },
-			{ id: "location", name: "Location", type: "string", role: "text" },
-			{ id: "date_start", name: "Race Start", type: "string", role: "date" },
-			{ id: "countdown_days", name: "Days until race", type: "number", role: "value", unit: "days" },
-			{ id: "json", name: "Next Race (JSON)", type: "string", role: "json" },
-		];
-
-		for (const state of raceStates) {
-			await this.setObjectNotExistsAsync(`next_race.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: state.type as "string" | "number",
-					role: state.role,
-					read: true,
-					write: false,
-					...(state.unit && { unit: state.unit }),
-				},
-				native: {},
-			});
-		}
-
-		// Next Session
-		await this.setObjectNotExistsAsync("next_session", {
-			type: "channel",
-			common: { name: "Next Session Information" },
-			native: {},
-		});
-
-		const nextSessionStates = [
-			{ id: "session_name", name: "Session Name", type: "string", role: "text" },
-			{ id: "session_type", name: "Session Type", type: "string", role: "text" },
-			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
-			{ id: "country", name: "Country", type: "string", role: "text" },
-			{ id: "location", name: "Location", type: "string", role: "text" },
-			{ id: "date_start", name: "Session Start", type: "string", role: "date" },
-			{ id: "countdown_days", name: "Days until session", type: "number", role: "value", unit: "days" },
-			{ id: "json", name: "Next Session (JSON)", type: "string", role: "json" },
-		];
-
-		for (const state of nextSessionStates) {
-			await this.setObjectNotExistsAsync(`next_session.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: state.type as "string" | "number",
-					role: state.role,
-					read: true,
-					write: false,
-					...(state.unit && { unit: state.unit }),
-				},
-				native: {},
-			});
-		}
-
-		// Weekend Sessions
-		await this.setObjectNotExistsAsync("weekend_sessions", {
-			type: "channel",
-			common: { name: "Next Race Weekend Sessions" },
-			native: {},
-		});
-
-		const weekendSessionStates = [
-			{ id: "circuit", name: "Circuit Name", type: "string", role: "text" },
-			{ id: "country", name: "Country", type: "string", role: "text" },
-			{ id: "location", name: "Location", type: "string", role: "text" },
-			{ id: "sessions_count", name: "Number of Sessions", type: "number", role: "value" },
-			{ id: "next_session_index", name: "Next Session Index", type: "number", role: "value" },
-			{ id: "sessions_json", name: "Weekend Sessions (JSON)", type: "string", role: "json" },
-		];
-
-		for (const state of weekendSessionStates) {
-			await this.setObjectNotExistsAsync(`weekend_sessions.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: state.type as "string" | "number",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Standings
-		await this.setObjectNotExistsAsync("standings", {
-			type: "channel",
-			common: { name: "Championship Standings" },
-			native: {},
-		});
-
-		const standingsStates = [
-			{ id: "drivers", name: "Driver Standings", type: "string", role: "json" },
-			{ id: "teams", name: "Team Standings", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of standingsStates) {
-			await this.setObjectNotExistsAsync(`standings.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: state.type as "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Live Session
-		await this.setObjectNotExistsAsync("live_session", {
-			type: "channel",
-			common: { name: "Live Session Data" },
-			native: {},
-		});
-
-		const liveStates = [
-			{ id: "status", name: "Session Status", type: "string", role: "text" },
-			{ id: "type", name: "Session Type", type: "string", role: "text" },
-			{ id: "track_status", name: "Track Status", type: "string", role: "text" },
-			{ id: "laps_total", name: "Total Laps", type: "number", role: "value" },
-			{ id: "weather", name: "Weather Data", type: "string", role: "json" },
-		];
-
-		for (const state of liveStates) {
-			await this.setObjectNotExistsAsync(`live_session.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: state.type as "string" | "number",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Race Control
-		await this.setObjectNotExistsAsync("race_control", {
-			type: "channel",
-			common: { name: "Race Control Messages" },
-			native: {},
-		});
-
-		const raceControlStates = [
-			{ id: "latest_message", name: "Latest Message", type: "string", role: "text" },
-			{ id: "messages", name: "All Messages", type: "string", role: "json" },
-		];
-
-		for (const state of raceControlStates) {
-			await this.setObjectNotExistsAsync(`race_control.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Positions
-		await this.setObjectNotExistsAsync("positions", {
-			type: "channel",
-			common: { name: "Driver Positions" },
-			native: {},
-		});
-
-		const positionStates = [
-			{ id: "current", name: "Current Positions", type: "string", role: "json" },
-			{ id: "intervals", name: "Intervals", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of positionStates) {
-			await this.setObjectNotExistsAsync(`positions.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Laps
-		await this.setObjectNotExistsAsync("laps", {
-			type: "channel",
-			common: { name: "Lap Timing Data" },
-			native: {},
-		});
-
-		const lapStates = [
-			{ id: "current", name: "Current Lap Times", type: "string", role: "json" },
-			{ id: "fastest", name: "Fastest Laps", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of lapStates) {
-			await this.setObjectNotExistsAsync(`laps.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Pit Stops
-		await this.setObjectNotExistsAsync("pit_stops", {
-			type: "channel",
-			common: { name: "Pit Stop Data" },
-			native: {},
-		});
-
-		const pitStates = [
-			{ id: "latest", name: "Latest Pit Stops", type: "string", role: "json" },
-			{ id: "all", name: "All Pit Stops", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of pitStates) {
-			await this.setObjectNotExistsAsync(`pit_stops.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Tyres (NEW)
-		await this.setObjectNotExistsAsync("tyres", {
-			type: "channel",
-			common: { name: "Tyre Strategy Data" },
-			native: {},
-		});
-
-		const tyreStates = [
-			{ id: "stints", name: "Tyre Stints", type: "string", role: "json" },
-			{ id: "current", name: "Current Tyres", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of tyreStates) {
-			await this.setObjectNotExistsAsync(`tyres.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Team Radio (NEW)
-		await this.setObjectNotExistsAsync("radio", {
-			type: "channel",
-			common: { name: "Team Radio Messages" },
-			native: {},
-		});
-
-		const radioStates = [
-			{ id: "latest", name: "Latest Radio Messages", type: "string", role: "json" },
-			{ id: "all", name: "All Radio Messages", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of radioStates) {
-			await this.setObjectNotExistsAsync(`radio.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Car Data (NEW)
-		await this.setObjectNotExistsAsync("car_data", {
-			type: "channel",
-			common: { name: "Car Telemetry Data" },
-			native: {},
-		});
-
-		const carDataStates = [
-			{ id: "latest", name: "Latest Telemetry", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of carDataStates) {
-			await this.setObjectNotExistsAsync(`car_data.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Location (NEW)
-		await this.setObjectNotExistsAsync("location", {
-			type: "channel",
-			common: { name: "Car Location Data" },
-			native: {},
-		});
-
-		const locationStates = [
-			{ id: "current", name: "Current Positions", type: "string", role: "json" },
-			{ id: "last_update", name: "Last Update", type: "string", role: "date" },
-		];
-
-		for (const state of locationStates) {
-			await this.setObjectNotExistsAsync(`location.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.role,
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-
-		// Session Results
-		await this.setObjectNotExistsAsync("session_results", {
-			type: "channel",
-			common: { name: "Session Results" },
-			native: {},
-		});
-
-		const sessionResultStates = [
-			{ id: "fp1", name: "Free Practice 1 Result" },
-			{ id: "fp2", name: "Free Practice 2 Result" },
-			{ id: "fp3", name: "Free Practice 3 Result" },
-			{ id: "sprint_qualifying", name: "Sprint Qualifying Result" },
-			{ id: "sprint", name: "Sprint Race Result" },
-			{ id: "qualifying", name: "Qualifying Result" },
-			{ id: "race", name: "Race Result" },
-			{ id: "last_update", name: "Last Update" },
-		];
-
-		for (const state of sessionResultStates) {
-			await this.setObjectNotExistsAsync(`session_results.${state.id}`, {
-				type: "state",
-				common: {
-					name: state.name,
-					type: "string",
-					role: state.id === "last_update" ? "date" : "json",
-					read: true,
-					write: false,
-				},
-				native: {},
-			});
-		}
-	}
-
-	private async fetchData(): Promise<void> {
-		if (this.isFetching) {
-			this.log.debug("Fetch already running, skipping cycle");
+	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
+		if (!state || state.ack) {
 			return;
 		}
-		this.isFetching = true;
+		this.log.debug(`State change: ${id}`);
+	}
+
+	private onUnload(callback: () => void): void {
 		try {
-			this.log.debug("Fetching data from OpenF1 API...");
-
-			const now = new Date();
-			const allSessions = await this.fetchAllSessionsForYear(now.getFullYear());
-
-			const nextRace = this.findNextRace(allSessions, now);
-			if (nextRace) {
-				await this.updateNextRaceStates(nextRace);
-
-				const nextSession = this.findNextSession(allSessions, now);
-				if (nextSession) {
-					await this.updateNextSession(nextSession);
-				}
-
-				const weekendSessions = this.buildWeekendSessions(allSessions, now);
-				if (weekendSessions) {
-					await this.updateWeekendSessions(weekendSessions);
-				}
+			if (this.scheduleInterval) {
+				clearInterval(this.scheduleInterval);
 			}
-
-			void this.updateStandingsIfNeeded();
-
-			if (this.currentSessionKey) {
-				await this.updateLiveSession();
-				await this.updateRaceControl();
-				await this.updatePositions();
-				await this.updateLaps();
-				await this.updatePitStops();
-				await this.updateTyres();
-				await this.updateRadio();
-				await this.updateCarData();
-				await this.updateLocation();
-			} else {
-				await this.setStateAsync("live_session.status", { val: "no_session", ack: true });
+			if (this.liveCheckInterval) {
+				clearInterval(this.liveCheckInterval);
 			}
-
-			await this.setStateAsync("info.connection", { val: true, ack: true });
-
-			if (this.config.enableDynamicPolling) {
-				await this.updatePollingInterval();
+			if (this.reconnectTimeout) {
+				clearTimeout(this.reconnectTimeout);
 			}
+			this.disconnectSignalR();
+			callback();
 		} catch {
-			this.log.error("Failed to fetch data");
-			await this.setStateAsync("info.connection", { val: false, ack: true });
-		} finally {
-			this.isFetching = false;
+			callback();
 		}
 	}
 
-	private async fetchAllSessionsForYear(year: number): Promise<NextRace[]> {
-		const response = await this.api.get<NextRace[]>("/sessions", {
-			params: { year },
-		});
-		return response.data ?? [];
-	}
+	// ── State Initialization ──────────────────────────────────────────────────
 
-	private findNextRace(sessions: NextRace[], now: Date): NextRace | null {
-		const futureRaces = sessions
-			.filter(s => s.session_name === "Race" && new Date(s.date_start) > now)
-			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
-		return futureRaces[0] ?? null;
-	}
+	private async initializeStates(): Promise<void> {
+		const channels: Array<{ id: string; name: string; states: StateDefinition[] }> = [
+			{
+				id: "schedule",
+				name: "Race Schedule",
+				states: [
+					{ id: "next_race_name", name: "Next Race Name", type: "string", role: "text" },
+					{ id: "next_race_round", name: "Next Race Round", type: "number", role: "value" },
+					{ id: "next_race_circuit", name: "Next Race Circuit", type: "string", role: "text" },
+					{ id: "next_race_country", name: "Next Race Country", type: "string", role: "text" },
+					{ id: "next_race_date", name: "Next Race Date (UTC)", type: "string", role: "date" },
+					{
+						id: "next_race_countdown_days",
+						name: "Days until Race",
+						type: "number",
+						role: "value",
+						unit: "days",
+					},
+					{ id: "next_session_name", name: "Next Session Name", type: "string", role: "text" },
+					{ id: "next_session_type", name: "Next Session Type", type: "string", role: "text" },
+					{ id: "next_session_date", name: "Next Session Date (UTC)", type: "string", role: "date" },
+					{
+						id: "next_session_countdown_hours",
+						name: "Hours until Session",
+						type: "number",
+						role: "value",
+						unit: "h",
+					},
+					{ id: "weekend_json", name: "Current Weekend Sessions (JSON)", type: "string", role: "json" },
+					{ id: "calendar", name: "Full Season Calendar (JSON)", type: "string", role: "json" },
+				],
+			},
+			{
+				id: "standings",
+				name: "Championship Standings",
+				states: [
+					{ id: "drivers", name: "Driver Standings (JSON)", type: "string", role: "json" },
+					{ id: "teams", name: "Team Standings (JSON)", type: "string", role: "json" },
+					{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+				],
+			},
+			{
+				id: "results",
+				name: "Session Results",
+				states: [
+					{ id: "race", name: "Race Result (JSON)", type: "string", role: "json" },
+					{ id: "qualifying", name: "Qualifying Result (JSON)", type: "string", role: "json" },
+					{ id: "sprint", name: "Sprint Result (JSON)", type: "string", role: "json" },
+					{ id: "fp1", name: "Practice 1 Result (JSON)", type: "string", role: "json" },
+					{ id: "fp2", name: "Practice 2 Result (JSON)", type: "string", role: "json" },
+					{ id: "fp3", name: "Practice 3 Result (JSON)", type: "string", role: "json" },
+					{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+				],
+			},
+			{
+				id: "live",
+				name: "Live Session Data (F1 Live Timing)",
+				states: [
+					{ id: "is_live", name: "Session Active", type: "boolean", role: "indicator" },
+					{ id: "session_name", name: "Session Name", type: "string", role: "text" },
+					{ id: "session_status", name: "Session Status", type: "string", role: "text" },
+					{ id: "track_status", name: "Track Status", type: "string", role: "text" },
+					{ id: "laps_current", name: "Current Lap", type: "number", role: "value" },
+					{ id: "laps_total", name: "Total Laps", type: "number", role: "value" },
+					{ id: "time_remaining", name: "Time Remaining", type: "string", role: "text" },
+					{ id: "time_elapsed", name: "Time Elapsed", type: "string", role: "text" },
+					{ id: "weather", name: "Track Weather (JSON)", type: "string", role: "json" },
+					{ id: "race_control", name: "Race Control Messages (JSON)", type: "string", role: "json" },
+					{ id: "top_three", name: "Top 3 Drivers (JSON)", type: "string", role: "json" },
+					{ id: "drivers", name: "All Drivers with Position/Tyre (JSON)", type: "string", role: "json" },
+					{ id: "tyres", name: "Current Tyres per Driver (JSON)", type: "string", role: "json" },
+					{ id: "pit_stops", name: "Pit Stops (JSON)", type: "string", role: "json" },
+					{ id: "team_radio", name: "Team Radio (JSON)", type: "string", role: "json" },
+					{ id: "last_update", name: "Last Update", type: "string", role: "date" },
+				],
+			},
+		];
 
-	private findNextSession(sessions: NextRace[], now: Date): NextRace | null {
-		const future = sessions
-			.filter(s => new Date(s.date_start) > now)
-			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
-		return future[0] ?? null;
-	}
-
-	private buildWeekendSessions(sessions: NextRace[], now: Date): WeekendSessions | null {
-		const future = sessions
-			.filter(s => new Date(s.date_start) > now)
-			.sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
-
-		if (future.length === 0) {
-			return null;
+		for (const channel of channels) {
+			await this.setObjectNotExistsAsync(channel.id, {
+				type: "channel",
+				common: { name: channel.name },
+				native: {},
+			});
+			for (const state of channel.states) {
+				await this.setObjectNotExistsAsync(`${channel.id}.${state.id}`, {
+					type: "state",
+					common: {
+						name: state.name,
+						type: state.type as "string" | "number" | "boolean",
+						role: state.role,
+						read: true,
+						write: false,
+						...(state.unit && { unit: state.unit }),
+					},
+					native: {},
+				});
+			}
 		}
+	}
 
-		const first = future[0];
-		const weekendEnd = new Date(new Date(first.date_start).getTime() + 7 * 24 * 60 * 60 * 1000);
+	// ── Jolpica / Ergast data ─────────────────────────────────────────────────
 
-		const weekendList = future.filter(
-			s => s.circuit_short_name === first.circuit_short_name && new Date(s.date_start) <= weekendEnd,
-		);
-
-		return {
-			circuit: first.circuit_short_name,
-			country: first.country_name,
-			location: first.location,
-			year: first.year,
-			sessions: weekendList,
-			next_session_index: 0,
+	/**
+	 * Fetch from Jolpica with automatic fallback to ergast.com.
+	 * Returns null (instead of throwing) on 404 — endpoint not found on both hosts.
+	 *
+	 * @param path - API path, e.g. "/current/last/results.json"
+	 */
+	private async fetchErgast(path: string): Promise<any> {
+		// Helper to detect "not found" errors so we don't waste the fallback on them
+		const isNotFound = (e: unknown): boolean => {
+			const status = (e as any)?.response?.status as number | undefined;
+			return status === 404 || status === 410;
 		};
+
+		try {
+			const res = await this.ergastApi.get<any>(`${this.JOLPICA_BASE}${path}`);
+			return res.data;
+		} catch (jolpicaErr) {
+			if (isNotFound(jolpicaErr)) {
+				this.log.debug(`Jolpica 404 for: ${path} — skipping fallback`);
+				return null;
+			}
+			// Network error / 5xx → try ergast.com
+			this.log.debug(`Jolpica unavailable, falling back to ergast.com for: ${path}`);
+			try {
+				const res = await this.ergastApi.get<any>(`${this.ERGAST_BASE}${path}`);
+				return res.data;
+			} catch (ergastErr) {
+				if (isNotFound(ergastErr)) {
+					this.log.debug(`Ergast 404 for: ${path}`);
+					return null;
+				}
+				throw ergastErr;
+			}
+		}
 	}
 
-	private async updateNextRaceStates(race: NextRace): Promise<void> {
-		await this.setStateAsync("next_race.circuit", { val: race.circuit_short_name, ack: true });
-		await this.setStateAsync("next_race.country", { val: race.country_name, ack: true });
-		await this.setStateAsync("next_race.location", { val: race.location, ack: true });
-		await this.setStateAsync("next_race.date_start", { val: race.date_start, ack: true });
-		const daysUntil = Math.ceil((new Date(race.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-		await this.setStateAsync("next_race.countdown_days", { val: daysUntil, ack: true });
-		await this.setStateAsync("next_race.json", { val: JSON.stringify(race, null, 2), ack: true });
-		this.log.debug("Next race updated");
+	private async refreshJolpicaData(): Promise<void> {
+		try {
+			const races = await this.fetchSchedule();
+			const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
+			await this.updateScheduleStates(races, allSessions, new Date());
+			void this.updateStandings();
+			void this.updateLatestResults();
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.log.warn(`Jolpica refresh failed: ${msg}`);
+		}
 	}
+
+	private async fetchSchedule(): Promise<JolpiaRaceEntry[]> {
+		try {
+			const data = await this.fetchErgast("/current.json");
+			return (data?.MRData?.RaceTable?.Races as JolpiaRaceEntry[]) ?? [];
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.log.warn(`Schedule fetch failed: ${msg}`);
+			return [];
+		}
+	}
+
+	private buildSessionsFromRace(race: JolpiaRaceEntry): ScheduleSession[] {
+		const sessions: ScheduleSession[] = [];
+		const round = parseInt(race.round, 10);
+		const base = {
+			round,
+			raceName: race.raceName,
+			circuit: race.Circuit.circuitName,
+			country: race.Circuit.Location.country,
+		};
+
+		const add = (name: string, type: string, dt: JolpiaSessionTime | undefined): void => {
+			if (!dt) {
+				return;
+			}
+			const startUTC = new Date(`${dt.date}T${dt.time}`);
+			const durationMin = SESSION_DURATIONS[name] ?? 90;
+			const endUTC = new Date(startUTC.getTime() + durationMin * 60 * 1000);
+			sessions.push({
+				...base,
+				name,
+				type,
+				startUTC: startUTC.toISOString(),
+				endUTC: endUTC.toISOString(),
+			});
+		};
+
+		add("Practice 1", "Practice", race.FirstPractice);
+		add("Practice 2", "Practice", race.SecondPractice);
+		add("Practice 3", "Practice", race.ThirdPractice);
+		add("Sprint Qualifying", "SprintQualifying", race.SprintQualifying);
+		add("Sprint", "Sprint", race.Sprint);
+		add("Qualifying", "Qualifying", race.Qualifying);
+		add("Race", "Race", { date: race.date, time: race.time });
+
+		return sessions;
+	}
+
+	private async updateScheduleStates(
+		races: JolpiaRaceEntry[],
+		allSessions: ScheduleSession[],
+		now: Date,
+	): Promise<void> {
+		if (races.length === 0) {
+			return;
+		}
+
+		// Full season calendar
+		const calendar = races.map(r => ({
+			round: parseInt(r.round, 10),
+			race_name: r.raceName,
+			circuit: r.Circuit.circuitName,
+			country: r.Circuit.Location.country,
+			date: r.date,
+			time: r.time,
+		}));
+		await this.setStateAsync("schedule.calendar", { val: JSON.stringify(calendar, null, 2), ack: true });
+
+		// Next race (keep current race as "next" for 3h after start — same as f1_sensor)
+		const GRACE_MS = 3 * 60 * 60 * 1000;
+		const nextRace = races.find(r => new Date(`${r.date}T${r.time}`).getTime() + GRACE_MS > now.getTime());
+		if (nextRace) {
+			const raceDate = new Date(`${nextRace.date}T${nextRace.time}`);
+			const daysUntil = Math.max(0, Math.ceil((raceDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+			await this.setStateAsync("schedule.next_race_name", { val: nextRace.raceName, ack: true });
+			await this.setStateAsync("schedule.next_race_round", {
+				val: parseInt(nextRace.round, 10),
+				ack: true,
+			});
+			await this.setStateAsync("schedule.next_race_circuit", {
+				val: nextRace.Circuit.circuitName,
+				ack: true,
+			});
+			await this.setStateAsync("schedule.next_race_country", {
+				val: nextRace.Circuit.Location.country,
+				ack: true,
+			});
+			await this.setStateAsync("schedule.next_race_date", { val: raceDate.toISOString(), ack: true });
+			await this.setStateAsync("schedule.next_race_countdown_days", { val: daysUntil, ack: true });
+
+			const weekendRound = parseInt(nextRace.round, 10);
+			const weekendSessions = allSessions.filter(s => s.round === weekendRound);
+			await this.setStateAsync("schedule.weekend_json", {
+				val: JSON.stringify(weekendSessions, null, 2),
+				ack: true,
+			});
+		}
+
+		// Next individual session
+		const nextSession = allSessions.find(s => new Date(s.startUTC) > now);
+		if (nextSession) {
+			const startDate = new Date(nextSession.startUTC);
+			const hoursUntil = Math.max(0, Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60)));
+			await this.setStateAsync("schedule.next_session_name", { val: nextSession.name, ack: true });
+			await this.setStateAsync("schedule.next_session_type", { val: nextSession.type, ack: true });
+			await this.setStateAsync("schedule.next_session_date", {
+				val: nextSession.startUTC,
+				ack: true,
+			});
+			await this.setStateAsync("schedule.next_session_countdown_hours", {
+				val: hoursUntil,
+				ack: true,
+			});
+		}
+	}
+
+	// ── Live Session Detection ─────────────────────────────────────────────────
+
+	private detectLiveSession(sessions: ScheduleSession[], now: Date): ScheduleSession | null {
+		const PRE_MS = 30 * 60 * 1000; // 30 min pre-buffer
+		const POST_MS = 10 * 60 * 1000; // 10 min post-buffer
+		for (const session of sessions) {
+			const start = new Date(new Date(session.startUTC).getTime() - PRE_MS);
+			const end = new Date(new Date(session.endUTC).getTime() + POST_MS);
+			if (now >= start && now <= end) {
+				return session;
+			}
+		}
+		return null;
+	}
+
+	private async checkLiveStatus(): Promise<void> {
+		try {
+			const races = await this.fetchSchedule();
+			const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
+			const now = new Date();
+			const prevSession = this.currentLiveSession;
+			this.currentLiveSession = this.detectLiveSession(allSessions, now);
+
+			if (this.currentLiveSession) {
+				await this.setStateAsync("live.is_live", { val: true, ack: true });
+				await this.setStateAsync("live.session_name", {
+					val: this.currentLiveSession.name,
+					ack: true,
+				});
+				// Connect SignalR if not already connected
+				if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+					void this.connectSignalR();
+				}
+			} else {
+				await this.setStateAsync("live.is_live", { val: false, ack: true });
+				if (this.ws) {
+					this.disconnectSignalR();
+				}
+
+				// Session just ended → refresh results & standings
+				if (prevSession) {
+					const savedKey = `${prevSession.round}-${prevSession.type}`;
+					if (savedKey !== this.lastSavedSession) {
+						this.lastSavedSession = savedKey;
+						this.log.info(
+							`Session ended: ${prevSession.name} (round ${prevSession.round}). Refreshing results...`,
+						);
+						void this.updateLatestResults();
+						if (prevSession.type === "Race") {
+							void this.updateStandings();
+						}
+					}
+				}
+			}
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.log.warn(`Live check failed: ${msg}`);
+		}
+	}
+
+	// ── SignalR Connection (F1 Live Timing) ───────────────────────────────────
+
+	private async connectSignalR(): Promise<void> {
+		if (this.wsConnecting) {
+			return;
+		}
+		this.wsConnecting = true;
+		try {
+			// 1. Negotiate to get connection token + cookies
+			const negRes = await this.ltApi.get("/signalr/negotiate", {
+				params: {
+					clientProtocol: "1.5",
+					connectionData: '[{"name":"Streaming"}]',
+				},
+			});
+			const token = encodeURIComponent(negRes.data.ConnectionToken as string);
+			const cookies = (negRes.headers["set-cookie"] ?? []).join("; ");
+
+			// 2. Build WebSocket URL
+			const wsUrl =
+				`wss://livetiming.formula1.com/signalr/connect` +
+				`?clientProtocol=1.5&transport=webSockets` +
+				`&connectionData=${encodeURIComponent('[{"name":"Streaming"}]')}` +
+				`&connectionToken=${token}`;
+
+			// 3. Connect
+			this.ws = new WebSocket(wsUrl, { headers: { Cookie: cookies } });
+
+			this.ws.on("open", () => {
+				this.log.info("F1 Live Timing: WebSocket connected");
+				const subscribeMsg = JSON.stringify({
+					H: "Streaming",
+					M: "Subscribe",
+					A: [SUBSCRIBE_STREAMS],
+					I: 1,
+				});
+				this.ws!.send(subscribeMsg);
+			});
+
+			this.ws.on("message", (raw: WebSocket.RawData) => {
+				let str: string;
+				if (Buffer.isBuffer(raw)) {
+					str = raw.toString("utf8");
+				} else if (Array.isArray(raw)) {
+					str = Buffer.concat(raw).toString("utf8");
+				} else {
+					str = Buffer.from(raw).toString("utf8");
+				}
+				void this.handleWsMessage(str);
+			});
+
+			this.ws.on("close", () => {
+				this.log.info("F1 Live Timing: WebSocket disconnected");
+				this.ws = null;
+				// Reconnect after 5s if still in live window
+				if (this.currentLiveSession) {
+					this.reconnectTimeout = setTimeout(() => void this.connectSignalR(), 5000);
+				}
+			});
+
+			this.ws.on("error", (err: Error) => {
+				this.log.warn(`F1 Live Timing WebSocket error: ${err.message}`);
+			});
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.log.warn(`F1 Live Timing connect failed: ${msg}`);
+			if (this.currentLiveSession) {
+				this.reconnectTimeout = setTimeout(() => void this.connectSignalR(), 15000);
+			}
+		} finally {
+			this.wsConnecting = false;
+		}
+	}
+
+	private disconnectSignalR(): void {
+		if (this.reconnectTimeout) {
+			clearTimeout(this.reconnectTimeout);
+			this.reconnectTimeout = undefined;
+		}
+		if (this.ws) {
+			this.ws.removeAllListeners();
+			this.ws.close();
+			this.ws = null;
+		}
+		// Reset in-memory caches
+		this.driverList = {};
+		this.timingData = {};
+		this.timingAppData = {};
+		this.rcMessages = [];
+	}
+
+	// ── SignalR Message Processing ─────────────────────────────────────────────
+
+	private async handleWsMessage(raw: string): Promise<void> {
+		let payload: any;
+		try {
+			payload = JSON.parse(raw);
+		} catch {
+			return;
+		}
+
+		for (const msg of payload?.M ?? []) {
+			if (msg.M !== "feed" || !Array.isArray(msg.A) || msg.A.length < 2) {
+				continue;
+			}
+			const [stream, data] = msg.A as [string, any];
+			await this.handleStreamData(stream, data);
+		}
+	}
+
+	private async handleStreamData(stream: string, data: any): Promise<void> {
+		try {
+			switch (stream) {
+				case "TrackStatus":
+					await this.onTrackStatus(data);
+					break;
+				case "SessionStatus":
+					await this.onSessionStatus(data);
+					break;
+				case "SessionInfo":
+					await this.onSessionInfo(data);
+					break;
+				case "WeatherData":
+					await this.onWeatherData(data);
+					break;
+				case "LapCount":
+					await this.onLapCount(data);
+					break;
+				case "ExtrapolatedClock":
+					await this.onExtrapolatedClock(data);
+					break;
+				case "DriverList":
+					this.driverList = this.deepMerge(this.driverList, data as Record<string, any>);
+					await this.publishDrivers();
+					break;
+				case "TimingData":
+					if (data?.Lines) {
+						this.timingData = this.deepMerge(this.timingData, data.Lines as Record<string, any>);
+						await this.publishDrivers();
+					}
+					break;
+				case "TimingAppData":
+					if (data?.Lines) {
+						this.timingAppData = this.deepMerge(this.timingAppData, data.Lines as Record<string, any>);
+						await this.publishDrivers();
+					}
+					break;
+				case "RaceControlMessages":
+					await this.onRaceControl(data);
+					break;
+				case "TopThree":
+					await this.onTopThree(data);
+					break;
+				case "TeamRadio":
+					await this.onTeamRadio(data);
+					break;
+				case "PitStopSeries":
+					await this.onPitStops(data);
+					break;
+				case "TyreStintSeries":
+					await this.onTyreStints(data);
+					break;
+			}
+			await this.setStateAsync("live.last_update", { val: new Date().toISOString(), ack: true });
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.log.debug(`Stream ${stream} error: ${msg}`);
+		}
+	}
+
+	private async onTrackStatus(data: any): Promise<void> {
+		const statusCode = String(data?.Status ?? "");
+		const mapped = TRACK_STATUS_MAP[statusCode] ?? data?.Message ?? statusCode;
+		await this.setStateAsync("live.track_status", { val: mapped, ack: true });
+	}
+
+	private async onSessionStatus(data: any): Promise<void> {
+		const status = String(data?.Status ?? data ?? "");
+		await this.setStateAsync("live.session_status", { val: status, ack: true });
+	}
+
+	private async onSessionInfo(data: any): Promise<void> {
+		const name = String(data?.Name ?? data?.Type ?? "");
+		if (name) {
+			await this.setStateAsync("live.session_name", { val: name, ack: true });
+		}
+	}
+
+	private async onWeatherData(data: any): Promise<void> {
+		const weather = {
+			air_temperature: parseFloat(data?.AirTemp ?? 0),
+			track_temperature: parseFloat(data?.TrackTemp ?? 0),
+			humidity: parseFloat(data?.Humidity ?? 0),
+			pressure: parseFloat(data?.Pressure ?? 0),
+			rainfall: parseFloat(data?.Rainfall ?? 0),
+			wind_speed: parseFloat(data?.WindSpeed ?? 0),
+			wind_direction: parseInt(String(data?.WindDirection ?? 0), 10),
+		};
+		await this.setStateAsync("live.weather", { val: JSON.stringify(weather, null, 2), ack: true });
+	}
+
+	private async onLapCount(data: any): Promise<void> {
+		if (data?.CurrentLap != null) {
+			await this.setStateAsync("live.laps_current", {
+				val: parseInt(String(data.CurrentLap), 10),
+				ack: true,
+			});
+		}
+		if (data?.TotalLaps != null) {
+			await this.setStateAsync("live.laps_total", {
+				val: parseInt(String(data.TotalLaps), 10),
+				ack: true,
+			});
+		}
+	}
+
+	private async onExtrapolatedClock(data: any): Promise<void> {
+		if (data?.Remaining != null) {
+			await this.setStateAsync("live.time_remaining", {
+				val: String(data.Remaining),
+				ack: true,
+			});
+		}
+		if (data?.Elapsed != null) {
+			await this.setStateAsync("live.time_elapsed", { val: String(data.Elapsed), ack: true });
+		}
+	}
+
+	private async onRaceControl(data: any): Promise<void> {
+		// Messages can come as object {"0": {...}, "1": {...}} or array
+		const incoming: any[] = data?.Messages ? Object.values(data.Messages) : Array.isArray(data) ? data : [];
+		if (incoming.length === 0) {
+			return;
+		}
+		this.rcMessages.push(...incoming);
+		if (this.rcMessages.length > 50) {
+			this.rcMessages = this.rcMessages.slice(-50);
+		}
+		await this.setStateAsync("live.race_control", {
+			val: JSON.stringify(this.rcMessages.slice(-20), null, 2),
+			ack: true,
+		});
+	}
+
+	private async onTopThree(data: any): Promise<void> {
+		const lines: any[] = Array.isArray(data?.Lines) ? (data.Lines as any[]) : [];
+		if (lines.length === 0) {
+			return;
+		}
+		const top3 = lines.slice(0, 3).map((l: any) => ({
+			position: parseInt(String(l.Position ?? 0), 10),
+			racing_number: String(l.RacingNumber ?? ""),
+			full_name: String(l.FullName ?? ""),
+			name_acronym: String(l.Tla ?? ""),
+			team: String(l.Team ?? ""),
+		}));
+		await this.setStateAsync("live.top_three", { val: JSON.stringify(top3, null, 2), ack: true });
+	}
+
+	private async onTeamRadio(data: any): Promise<void> {
+		const captures: any[] = data?.Captures ? Object.values(data.Captures) : Array.isArray(data) ? data : [];
+		if (captures.length === 0) {
+			return;
+		}
+		await this.setStateAsync("live.team_radio", {
+			val: JSON.stringify(captures.slice(-10), null, 2),
+			ack: true,
+		});
+	}
+
+	private async onPitStops(data: any): Promise<void> {
+		const stops: any[] = [];
+		for (const [num, pits] of Object.entries(data ?? {})) {
+			if (Array.isArray(pits)) {
+				for (const p of pits) {
+					stops.push({ racing_number: num, ...(p as object) });
+				}
+			}
+		}
+		if (stops.length > 0) {
+			await this.setStateAsync("live.pit_stops", {
+				val: JSON.stringify(stops, null, 2),
+				ack: true,
+			});
+		}
+	}
+
+	private async onTyreStints(data: any): Promise<void> {
+		const tyres: any[] = [];
+		for (const [num, stints] of Object.entries(data ?? {})) {
+			if (Array.isArray(stints) && stints.length > 0) {
+				const current = stints[stints.length - 1];
+				tyres.push({
+					racing_number: num,
+					compound: current.Compound ?? "",
+					total_laps: current.TotalLaps ?? 0,
+					is_new: current.New ?? false,
+				});
+			}
+		}
+		if (tyres.length > 0) {
+			await this.setStateAsync("live.tyres", { val: JSON.stringify(tyres, null, 2), ack: true });
+		}
+	}
+
+	/**
+	 * Merge DriverList + TimingData + TimingAppData into one `live.drivers` state.
+	 * This mirrors what f1_sensor does with its LiveDriversCoordinator.
+	 */
+	private async publishDrivers(): Promise<void> {
+		const drivers: any[] = [];
+		for (const [num, info] of Object.entries(this.driverList)) {
+			if (!info || typeof info !== "object") {
+				continue;
+			}
+			const timing = this.timingData[num] ?? {};
+			const appData = this.timingAppData[num] ?? {};
+			const stints: any[] = appData?.Stints ? Object.values(appData.Stints) : [];
+			const currentStint = stints.length > 0 ? stints[stints.length - 1] : null;
+
+			const position = parseInt(String(timing?.Position ?? 0), 10) || null;
+			drivers.push({
+				racing_number: info.RacingNumber ?? num,
+				full_name: info.FullName ?? "",
+				name_acronym: info.Tla ?? "",
+				team_name: info.TeamName ?? "",
+				team_colour: info.TeamColour ?? "",
+				position,
+				gap_to_leader: timing?.GapToLeader ?? null,
+				interval: timing?.IntervalToPositionAhead?.Value ?? null,
+				last_lap_time: timing?.LastLapTime?.Value ?? null,
+				tyre_compound: currentStint?.Compound ?? null,
+				tyre_laps: currentStint?.TotalLaps ?? null,
+				tyre_new: currentStint?.New ?? null,
+			});
+		}
+
+		if (drivers.length === 0) {
+			return;
+		}
+		drivers.sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
+		await this.setStateAsync("live.drivers", {
+			val: JSON.stringify(drivers, null, 2),
+			ack: true,
+		});
+	}
+
+	// ── Standings ─────────────────────────────────────────────────────────────
 
 	private async updateStandings(): Promise<void> {
-		const delays = [5000, 15000, 45000];
-
+		const delays = [10000, 30000, 90000];
 		for (let attempt = 0; attempt < 3; attempt++) {
 			try {
-				const [driverResponse, constructorResponse] = await Promise.all([
-					this.ergastApi.get<any>(this.ERGAST_DRIVER_STANDINGS_URL),
-					this.ergastApi.get<any>(this.ERGAST_CONSTRUCTOR_STANDINGS_URL),
+				const [driverRes, constructorRes] = await Promise.all([
+					this.fetchErgast("/current/driverstandings.json?limit=100"),
+					this.fetchErgast("/current/constructorstandings.json?limit=100"),
 				]);
 
-				const driverStandings =
-					driverResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings ?? [];
+				const driverStandings = driverRes?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings ?? [];
 				const constructorStandings =
-					constructorResponse.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings ?? [];
+					constructorRes?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings ?? [];
 
 				if (driverStandings.length > 0) {
-					const openF1Response = await this.api.get<Driver[]>("/drivers", {
-						params: { session_key: "latest" },
+					const drivers = (driverStandings as any[]).map((s: any) => ({
+						position: parseInt(String(s.position), 10),
+						driver_number: parseInt(String(s.Driver.permanentNumber), 10),
+						full_name: `${s.Driver.givenName} ${s.Driver.familyName}`,
+						name_acronym: s.Driver.code ?? "",
+						team_name: s.Constructors?.[0]?.name ?? "",
+						team_colour: this.getTeamColour(s.Constructors?.[0]?.constructorId ?? ""),
+						points: parseFloat(String(s.points)),
+						wins: parseInt(String(s.wins), 10),
+					}));
+					await this.setStateAsync("standings.drivers", {
+						val: JSON.stringify(drivers, null, 2),
+						ack: true,
 					});
-					const openF1Drivers: Driver[] = openF1Response.data ?? [];
-
-					const drivers = driverStandings.map((standing: any) => {
-						const driverNumber = parseInt(standing.Driver.permanentNumber);
-						const openF1Driver = openF1Drivers.find(d => d.driver_number === driverNumber);
-						return {
-							position: parseInt(standing.position),
-							driver_number: driverNumber,
-							full_name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
-							name_acronym: standing.Driver.code ?? "",
-							team_name: standing.Constructors?.[0]?.name ?? "",
-							team_colour: this.getTeamColour(standing.Constructors?.[0]?.constructorId ?? ""),
-							points: parseFloat(standing.points),
-							wins: parseInt(standing.wins),
-							headshot_url: openF1Driver?.headshot_url ?? "",
-						};
-					});
-
-					await this.setStateAsync("standings.drivers", { val: JSON.stringify(drivers, null, 2), ack: true });
 				}
 
 				if (constructorStandings.length > 0) {
-					const teams = constructorStandings.map((standing: any) => ({
-						position: parseInt(standing.position),
-						team_name: standing.Constructor.name,
-						team_colour: this.getTeamColour(standing.Constructor.constructorId),
-						points: parseFloat(standing.points),
-						wins: parseInt(standing.wins),
+					const teams = (constructorStandings as any[]).map((s: any) => ({
+						position: parseInt(String(s.position), 10),
+						team_name: s.Constructor.name,
+						team_colour: this.getTeamColour(s.Constructor.constructorId),
+						points: parseFloat(String(s.points)),
+						wins: parseInt(String(s.wins), 10),
 					}));
-					await this.setStateAsync("standings.teams", { val: JSON.stringify(teams, null, 2), ack: true });
+					await this.setStateAsync("standings.teams", {
+						val: JSON.stringify(teams, null, 2),
+						ack: true,
+					});
 				}
 
-				await this.setStateAsync("standings.last_update", { val: new Date().toISOString(), ack: true });
-				this.log.debug("Updated standings from Ergast API");
-				return; // success — no more retries
+				await this.setStateAsync("standings.last_update", {
+					val: new Date().toISOString(),
+					ack: true,
+				});
+				this.log.debug("Standings updated");
+				return;
 			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
+				const msg = error instanceof Error ? error.message : String(error);
 				if (attempt < 2) {
 					this.log.warn(
-						`Standings fetch failed (attempt ${attempt + 1}/3): ${message}. Retrying in ${delays[attempt] / 1000}s...`,
+						`Standings fetch failed (attempt ${attempt + 1}/3): ${msg}. Retrying in ${delays[attempt] / 1000}s...`,
 					);
-					await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+					await new Promise<void>(resolve => setTimeout(resolve, delays[attempt]));
 				} else {
-					this.log.error(`Failed to update standings after 3 attempts: ${message}`);
+					this.log.error(`Failed to update standings after 3 attempts: ${msg}`);
 				}
 			}
 		}
 	}
 
-	private async updateStandingsIfNeeded(): Promise<void> {
-		const lastUpdateState = await this.getStateAsync("standings.last_update");
-		const lastUpdate = lastUpdateState?.val as string | null;
+	// ── Results ───────────────────────────────────────────────────────────────
 
-		if (!lastUpdate) {
-			this.log.debug("No standings data yet, fetching...");
-			await this.updateStandings();
+	private async updateLatestResults(): Promise<void> {
+		const wrap = async (label: string, fn: () => Promise<unknown>): Promise<void> => {
+			try {
+				await fn();
+			} catch (e) {
+				this.log.warn(`Results [${label}] failed: ${e instanceof Error ? e.message : String(e)}`);
+			}
+		};
+
+		let round: number | null = null;
+		await wrap("race", () => this.updateRaceResults());
+		await wrap("qualifying", async () => {
+			round = await this.updateQualifyingResults();
+		});
+		await wrap("sprint", () => this.updateSprintResults());
+
+		if (round != null) {
+			await Promise.allSettled([
+				wrap("fp1", () => this.updatePracticeResults(round!, "fp1", 1)),
+				wrap("fp2", () => this.updatePracticeResults(round!, "fp2", 2)),
+				wrap("fp3", () => this.updatePracticeResults(round!, "fp3", 3)),
+			]);
+		}
+
+		await this.setStateAsync("results.last_update", { val: new Date().toISOString(), ack: true });
+		this.log.info("Results updated");
+	}
+
+	private async updateRaceResults(): Promise<void> {
+		const data = await this.fetchErgast("/current/last/results.json?limit=100");
+		const race = data?.MRData?.RaceTable?.Races?.[0];
+		if (!race) {
+			this.log.debug("No race results from Ergast");
 			return;
 		}
-
-		const ageMs = Date.now() - new Date(lastUpdate).getTime();
-		const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-		if (ageMs > sevenDaysMs) {
-			this.log.debug("Standings older than 7 days, refreshing...");
-			await this.updateStandings();
-		}
+		const results: SessionResultEntry[] = (race.Results as JolpiaRaceResult[]).map(r => ({
+			position: parseInt(r.positionText, 10) || 0,
+			driver_number: parseInt(r.number, 10),
+			name_acronym: r.Driver.code ?? "",
+			full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
+			team_name: r.Constructor.name,
+			team_colour: this.getTeamColour(r.Constructor.constructorId),
+			best_lap_time: this.parseLapTimeToSeconds(r.FastestLap?.Time?.time),
+			lap_count: parseInt(r.laps, 10),
+			status: r.status,
+			race_name: race.raceName ?? "",
+			round: parseInt(race.round, 10),
+		}));
+		await this.setStateAsync("results.race", { val: JSON.stringify(results, null, 2), ack: true });
 	}
+
+	private async updateQualifyingResults(): Promise<number | null> {
+		const data = await this.fetchErgast("/current/last/qualifying.json?limit=100");
+		const race = data?.MRData?.RaceTable?.Races?.[0];
+		if (!race) {
+			this.log.debug("No qualifying results from Ergast");
+			return null;
+		}
+		const round = parseInt(race.round, 10);
+		const results: SessionResultEntry[] = (race.QualifyingResults as JolpiaQualifyingResult[]).map(r => ({
+			position: parseInt(r.position, 10),
+			driver_number: parseInt(r.number, 10),
+			name_acronym: r.Driver.code ?? "",
+			full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
+			team_name: r.Constructor.name,
+			team_colour: this.getTeamColour(r.Constructor.constructorId),
+			best_lap_time: this.parseLapTimeToSeconds(r.Q3 ?? r.Q2 ?? r.Q1),
+			lap_count: 0,
+			q1: r.Q1,
+			q2: r.Q2,
+			q3: r.Q3,
+			race_name: race.raceName ?? "",
+			round,
+		}));
+		await this.setStateAsync("results.qualifying", {
+			val: JSON.stringify(results, null, 2),
+			ack: true,
+		});
+		return round;
+	}
+
+	private async updateSprintResults(): Promise<void> {
+		const data = await this.fetchErgast("/current/sprint.json?limit=100");
+		const races: any[] = data?.MRData?.RaceTable?.Races ?? [];
+		const race = races[races.length - 1];
+		if (!race) {
+			this.log.debug("No sprint results from Ergast");
+			return;
+		}
+		const results: SessionResultEntry[] = (race.SprintResults as JolpiaSprintResult[]).map(r => ({
+			position: parseInt(r.positionText, 10) || 0,
+			driver_number: parseInt(r.number, 10),
+			name_acronym: r.Driver.code ?? "",
+			full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
+			team_name: r.Constructor.name,
+			team_colour: this.getTeamColour(r.Constructor.constructorId),
+			best_lap_time: null,
+			lap_count: parseInt(r.laps, 10),
+			status: r.status,
+			race_name: race.raceName ?? "",
+			round: parseInt(race.round, 10),
+		}));
+		await this.setStateAsync("results.sprint", { val: JSON.stringify(results, null, 2), ack: true });
+	}
+
+	private async updatePracticeResults(round: number, stateId: string, num: 1 | 2 | 3): Promise<void> {
+		const data = await this.fetchErgast(`/current/${round}/practice/${num}.json`);
+		const race = data?.MRData?.RaceTable?.Races?.[0];
+		if (!race?.PracticeResults?.length) {
+			this.log.debug(`No Practice ${num} results for round ${round}`);
+			return;
+		}
+		const results: SessionResultEntry[] = (race.PracticeResults as JolpiaPracticeResult[]).map(r => ({
+			position: parseInt(r.position, 10),
+			driver_number: parseInt(r.number, 10),
+			name_acronym: r.Driver.code ?? "",
+			full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
+			team_name: r.Constructor.name,
+			team_colour: this.getTeamColour(r.Constructor.constructorId),
+			best_lap_time: this.parseLapTimeToSeconds(r.time),
+			lap_count: parseInt(r.laps, 10),
+			race_name: race.raceName ?? "",
+			round,
+		}));
+		await this.setStateAsync(`results.${stateId}`, {
+			val: JSON.stringify(results, null, 2),
+			ack: true,
+		});
+	}
+
+	// ── Helpers ───────────────────────────────────────────────────────────────
+
+	/**
+	 * Deep merge two plain objects (for SignalR incremental updates)
+	 *
+	 * @param target
+	 * @param source
+	 */
+	private deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+		const result = { ...target };
+		for (const [key, val] of Object.entries(source)) {
+			if (
+				val !== null &&
+				typeof val === "object" &&
+				!Array.isArray(val) &&
+				result[key] !== null &&
+				typeof result[key] === "object" &&
+				!Array.isArray(result[key])
+			) {
+				result[key] = this.deepMerge(result[key] as Record<string, any>, val as Record<string, any>);
+			} else {
+				result[key] = val;
+			}
+		}
+		return result;
+	}
+
+	private parseLapTimeToSeconds(timeStr: string | undefined): number | null {
+		if (!timeStr) {
+			return null;
+		}
+		const parts = timeStr.split(":");
+		if (parts.length === 2) {
+			return parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
+		}
+		const val = parseFloat(timeStr);
+		return isNaN(val) ? null : val;
+	}
+
 	private getTeamColour(constructorId: string): string {
 		const colours: Record<string, string> = {
 			mercedes: "00D2BE",
@@ -866,563 +1160,11 @@ class F1 extends utils.Adapter {
 			alphatauri: "6692FF",
 			rb: "6692FF",
 			williams: "64C4FF",
-			sauber: "FF0000",
-			audi: "FF0000",
-			kick_sauber: "FF0000",
+			sauber: "52E252",
+			kick_sauber: "52E252",
+			audi: "52E252",
 		};
-		return colours[constructorId] || "FFFFFF";
-	}
-	private getSessionResultStateId(sessionName: string): string | null {
-		const mapping: Record<string, string> = {
-			"Practice 1": "fp1",
-			"Practice 2": "fp2",
-			"Practice 3": "fp3",
-			"Sprint Shootout": "sprint_qualifying",
-			Sprint: "sprint",
-			Qualifying: "qualifying",
-			Race: "race",
-		};
-		return mapping[sessionName] ?? null;
-	}
-
-	private async updateSessionResults(sessionKey: number, sessionName: string): Promise<void> {
-		const stateId = this.getSessionResultStateId(sessionName);
-		if (!stateId) {
-			this.log.debug(`No result state mapping for session: ${sessionName}`);
-			return;
-		}
-
-		try {
-			const [lapsResponse, driversResponse] = await Promise.all([
-				this.api.get<Lap[]>("/laps", { params: { session_key: sessionKey } }),
-				this.api.get<Driver[]>("/drivers", { params: { session_key: sessionKey } }),
-			]);
-
-			const laps: Lap[] = lapsResponse.data ?? [];
-			const drivers: Driver[] = driversResponse.data ?? [];
-
-			if (laps.length === 0) {
-				this.log.debug(`No lap data for session ${sessionName} (key: ${sessionKey})`);
-				return;
-			}
-
-			// Calculate best lap time and lap count per driver
-			// Exclude pit-out laps (not representative timing)
-			const driverStats = new Map<number, { best: number | null; count: number }>();
-			for (const lap of laps) {
-				const existing = driverStats.get(lap.driver_number) ?? { best: null, count: 0 };
-				const lapTime = lap.lap_duration > 0 && !lap.is_pit_out_lap ? lap.lap_duration : null;
-				const newBest =
-					lapTime !== null && (existing.best === null || lapTime < existing.best) ? lapTime : existing.best;
-				driverStats.set(lap.driver_number, { best: newBest, count: existing.count + 1 });
-			}
-
-			// Build result array sorted by best lap time
-			const results: SessionResultEntry[] = Array.from(driverStats.entries())
-				.map(([driverNumber, stats]) => {
-					const driver = drivers.find(d => d.driver_number === driverNumber);
-					return {
-						position: 0,
-						driver_number: driverNumber,
-						name_acronym: driver?.name_acronym ?? String(driverNumber),
-						full_name: driver?.full_name ?? String(driverNumber),
-						team_name: driver?.team_name ?? "",
-						team_colour: driver?.team_colour ?? "FFFFFF",
-						best_lap_time: stats.best,
-						lap_count: stats.count,
-					};
-				})
-				.sort((a, b) => {
-					if (a.best_lap_time === null) {
-						return 1;
-					}
-					if (b.best_lap_time === null) {
-						return -1;
-					}
-					return a.best_lap_time - b.best_lap_time;
-				})
-				.map((entry, index) => ({ ...entry, position: index + 1 }));
-
-			await this.setStateAsync(`session_results.${stateId}`, {
-				val: JSON.stringify(results, null, 2),
-				ack: true,
-			});
-			await this.setStateAsync("session_results.last_update", {
-				val: new Date().toISOString(),
-				ack: true,
-			});
-
-			this.lastCompletedSessionKey = sessionKey;
-			this.log.info(`Saved results for session: ${sessionName}`);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			this.log.error(`Failed to update session results for ${sessionName}: ${message}`);
-		}
-	}
-
-	private async updateLiveSession(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const sessionResponse = await this.api.get<Session[]>("/sessions", {
-				params: { session_key: this.currentSessionKey },
-			});
-
-			if (sessionResponse.data && sessionResponse.data.length > 0) {
-				const session = sessionResponse.data[0];
-				const now = new Date();
-				const sessionStart = new Date(session.date_start);
-				const sessionEnd = new Date(session.date_end);
-
-				let status = "unknown";
-				if (now < sessionStart) {
-					status = "pre_session";
-				} else if (now >= sessionStart && now <= sessionEnd) {
-					status = "active";
-				} else {
-					status = "finished";
-				}
-
-				await this.setStateAsync("live_session.status", { val: status, ack: true });
-
-				if (
-					this.lastLiveSessionStatus === "active" &&
-					status === "finished" &&
-					session.session_key !== this.lastCompletedSessionKey
-				) {
-					this.log.info(`Session finished: ${session.session_name}. Saving results...`);
-					await this.updateSessionResults(session.session_key, session.session_name);
-					if (session.session_name === "Race") {
-						void this.updateStandings();
-					}
-					// Only advance status if results were saved (lastCompletedSessionKey updated)
-					// If save failed, keep "active" so next cycle retries the trigger
-					if (this.lastCompletedSessionKey === session.session_key) {
-						this.lastLiveSessionStatus = status;
-					}
-				} else {
-					this.lastLiveSessionStatus = status;
-				}
-
-				await this.setStateAsync("live_session.type", { val: session.session_name, ack: true });
-			}
-
-			const weatherResponse = await this.api.get<Weather[]>("/weather", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (weatherResponse.data && weatherResponse.data.length > 0) {
-				const latestWeather = weatherResponse.data[weatherResponse.data.length - 1];
-				await this.setStateAsync("live_session.weather", {
-					val: JSON.stringify(latestWeather, null, 2),
-					ack: true,
-				});
-			}
-
-			this.log.debug("Updated live session");
-		} catch {
-			this.log.debug("Failed to update live session");
-		}
-	}
-
-	private async updateRaceControl(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<RaceControlMessage[]>("/race_control", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const messages = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-				const latestMessage = messages[0];
-				const msgText = `${latestMessage.message} (${latestMessage.flag || latestMessage.category})`;
-				await this.setStateAsync("race_control.latest_message", {
-					val: msgText,
-					ack: true,
-				});
-				await this.setStateAsync("race_control.messages", {
-					val: JSON.stringify(messages, null, 2),
-					ack: true,
-				});
-
-				this.log.debug("Updated race control");
-			}
-		} catch {
-			this.log.debug("Failed to update race control");
-		}
-	}
-
-	private async updatePositions(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const posResponse = await this.api.get<Position[]>("/position", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (posResponse.data && posResponse.data.length > 0) {
-				// Keep newest entry per driver
-				const sorted = posResponse.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-				const seen = new Set<number>();
-				const latestPositions: Position[] = [];
-				for (const entry of sorted) {
-					if (!seen.has(entry.driver_number)) {
-						seen.add(entry.driver_number);
-						latestPositions.push(entry);
-					}
-				}
-				latestPositions.sort((a, b) => a.position - b.position);
-
-				await this.setStateAsync("positions.current", {
-					val: JSON.stringify(latestPositions, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("positions.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-			}
-
-			const intResponse = await this.api.get<Interval[]>("/intervals", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (intResponse.data && intResponse.data.length > 0) {
-				await this.setStateAsync("positions.intervals", {
-					val: JSON.stringify(intResponse.data, null, 2),
-					ack: true,
-				});
-			}
-
-			this.log.debug("Updated positions");
-		} catch {
-			this.log.debug("Failed to update positions");
-		}
-	}
-
-	private async updateLaps(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<Lap[]>("/laps", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const currentLaps = response.data
-					.filter(lap => lap.lap_duration > 0)
-					.sort((a, b) => b.lap_number - a.lap_number)
-					.slice(0, 20);
-
-				const fastestLaps = response.data
-					.filter(lap => lap.lap_duration > 0 && !lap.is_pit_out_lap)
-					.sort((a, b) => a.lap_duration - b.lap_duration)
-					.slice(0, 10);
-
-				await this.setStateAsync("laps.current", {
-					val: JSON.stringify(currentLaps, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("laps.fastest", {
-					val: JSON.stringify(fastestLaps, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("laps.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated lap times");
-			}
-		} catch {
-			this.log.debug("Failed to update lap times");
-		}
-	}
-
-	private async updatePitStops(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<PitStop[]>("/pit", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const allPits = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-				const latestPits = allPits.slice(0, 5);
-
-				await this.setStateAsync("pit_stops.latest", {
-					val: JSON.stringify(latestPits, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("pit_stops.all", {
-					val: JSON.stringify(allPits, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("pit_stops.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated pit stops");
-			}
-		} catch {
-			this.log.debug("Failed to update pit stops");
-		}
-	}
-
-	private async updateTyres(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<Stint[]>("/stints", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const allStints = response.data.sort((a, b) => {
-					if (a.driver_number === b.driver_number) {
-						return b.stint_number - a.stint_number;
-					}
-					return a.driver_number - b.driver_number;
-				});
-
-				const currentTyres: any[] = [];
-				const seenDrivers = new Set<number>();
-
-				for (const stint of allStints) {
-					if (!seenDrivers.has(stint.driver_number)) {
-						currentTyres.push(stint);
-						seenDrivers.add(stint.driver_number);
-					}
-				}
-
-				await this.setStateAsync("tyres.stints", {
-					val: JSON.stringify(allStints, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("tyres.current", {
-					val: JSON.stringify(currentTyres, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("tyres.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated tyre data");
-			}
-		} catch {
-			this.log.debug("Failed to update tyre data");
-		}
-	}
-
-	private async updateRadio(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<Radio[]>("/team_radio", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const allRadio = response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-				const latestRadio = allRadio.slice(0, 10);
-
-				await this.setStateAsync("radio.latest", {
-					val: JSON.stringify(latestRadio, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("radio.all", {
-					val: JSON.stringify(allRadio, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("radio.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated team radio");
-			}
-		} catch {
-			this.log.debug("Failed to update team radio");
-		}
-	}
-
-	private async updateCarData(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<CarData[]>("/car_data", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const latestData = response.data
-					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-					.slice(0, 20);
-
-				await this.setStateAsync("car_data.latest", {
-					val: JSON.stringify(latestData, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("car_data.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated car telemetry");
-			}
-		} catch {
-			this.log.debug("Failed to update car telemetry");
-		}
-	}
-
-	private async updateLocation(): Promise<void> {
-		if (!this.currentSessionKey) {
-			return;
-		}
-
-		try {
-			const response = await this.api.get<Location[]>("/location", {
-				params: {
-					session_key: this.currentSessionKey,
-				},
-			});
-
-			if (response.data && response.data.length > 0) {
-				const latestLocations = response.data
-					.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-					.slice(0, 20);
-
-				await this.setStateAsync("location.current", {
-					val: JSON.stringify(latestLocations, null, 2),
-					ack: true,
-				});
-				await this.setStateAsync("location.last_update", {
-					val: new Date().toISOString(),
-					ack: true,
-				});
-
-				this.log.debug("Updated car locations");
-			}
-		} catch {
-			this.log.debug("Failed to update car locations");
-		}
-	}
-
-	/**
-	 * Update next_session states
-	 *
-	 * @param session - Next session data
-	 */
-	private async updateNextSession(session: NextRace | null): Promise<void> {
-		if (session) {
-			await this.setStateAsync("next_session.session_name", {
-				val: session.session_name,
-				ack: true,
-			});
-			await this.setStateAsync("next_session.session_type", {
-				val: session.session_type,
-				ack: true,
-			});
-			await this.setStateAsync("next_session.circuit", { val: session.circuit_short_name, ack: true });
-			await this.setStateAsync("next_session.country", { val: session.country_name, ack: true });
-			await this.setStateAsync("next_session.location", { val: session.location, ack: true });
-			await this.setStateAsync("next_session.date_start", { val: session.date_start, ack: true });
-
-			const daysUntil = Math.ceil((new Date(session.date_start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-			await this.setStateAsync("next_session.countdown_days", { val: daysUntil, ack: true });
-
-			await this.setStateAsync("next_session.json", { val: JSON.stringify(session), ack: true });
-		} else {
-			await this.setStateAsync("next_session.session_name", { val: "No upcoming session", ack: true });
-		}
-	}
-
-	/**
-	 * Update weekend_sessions states
-	 *
-	 * @param weekend - Weekend sessions data
-	 */
-	private async updateWeekendSessions(weekend: WeekendSessions | null): Promise<void> {
-		if (weekend) {
-			await this.setStateAsync("weekend_sessions.circuit", { val: weekend.circuit, ack: true });
-			await this.setStateAsync("weekend_sessions.country", { val: weekend.country, ack: true });
-			await this.setStateAsync("weekend_sessions.location", { val: weekend.location, ack: true });
-			await this.setStateAsync("weekend_sessions.sessions_count", {
-				val: weekend.sessions.length,
-				ack: true,
-			});
-			await this.setStateAsync("weekend_sessions.next_session_index", {
-				val: weekend.next_session_index,
-				ack: true,
-			});
-			await this.setStateAsync("weekend_sessions.sessions_json", {
-				val: JSON.stringify(weekend.sessions),
-				ack: true,
-			});
-		} else {
-			await this.setStateAsync("weekend_sessions.sessions_count", { val: 0, ack: true });
-		}
-	}
-	private onUnload(callback: () => void): void {
-		try {
-			if (this.updateInterval) {
-				clearInterval(this.updateInterval);
-			}
-			this.log.info("F1 adapter stopped");
-			callback();
-		} catch {
-			callback();
-		}
-	}
-
-	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
-		if (state) {
-			this.log.debug("state changed");
-		} else {
-			this.log.debug("state deleted");
-		}
+		return colours[constructorId] ?? "FFFFFF";
 	}
 }
 

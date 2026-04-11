@@ -71,48 +71,5 @@
 			"lg": 4,
 			"xl": 3
 		},
-		"_favoritesHeader": {
-			"type": "header",
-			"text": "Favorites (for future highlighting)",
-			"size": 4,
-			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 3
-		},
-		"favoriteDriver": {
-			"type": "text",
-			"label": "Favorite Driver",
-			"placeholder": "e.g., Max Verstappen",
-			"help": "Your favorite driver (will be highlighted in future widgets)",
-			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 3
-		},
-		"favoriteTeam": {
-			"type": "text",
-			"label": "Favorite Team",
-			"placeholder": "e.g., Red Bull Racing",
-			"help": "Your favorite team (will be highlighted in future widgets)",
-			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 3
-		},
-		"highlightColor": {
-			"type": "color",
-			"label": "Highlight Color",
-			"default": "#3bb273",
-			"help": "Color for highlighting favorites (hex code)",
-			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 3
-		}
 	}
 }

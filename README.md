@@ -4,33 +4,67 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.f1.svg)](https://www.npmjs.com/package/iobroker.f1)
 [![License](https://img.shields.io/github/license/bloop16/ioBroker.f1.svg)](https://github.com/bloop16/ioBroker.f1/blob/main/LICENSE)
 
-Formula 1 live data integration for ioBroker using the [OpenF1 API](https://openf1.org/).
+Formula 1 live data integration for ioBroker — race calendar, standings, session results and real-time live data via the official F1 Live Timing feed.
 
 ## Features
 
-- **Race Calendar** - Next race information with countdown
-- **Championship Standings** - Driver and team standings
-- **Live Session Data** - Track status, weather, race control messages
-- **Live Timing** - Positions, lap times, sector times, intervals
-- **Pit Stops** - Pit stop data and statistics
-- **Tyre Strategy** - Tyre compounds and stint information
-- **Team Radio** - Radio messages with audio recordings
-- **Telemetry** - Speed, throttle, brake, gear, RPM, DRS
-- **Track Position** - Real-time car positions (X/Y/Z coordinates)
+- **Race Calendar** — Next race & session info with countdown (days/hours)
+- **Full Season Calendar** — All rounds of the current season as JSON
+- **Championship Standings** — Driver and constructor standings with points and wins
+- **Session Results** — Race, qualifying, sprint, and all three practice sessions
+- **Live Session Data** — Real-time data via F1 Live Timing SignalR WebSocket
+  - Track status (AllClear / Yellow / SafetyCar / VSC / RedFlag)
+  - Session status and name
+  - Current & total laps
+  - Time remaining / elapsed
+  - Track weather (air temp, track temp, rain, wind, humidity)
+  - Driver positions with gaps, lap times and tyre info
+  - Top 3 live leaderboard
+  - Race control messages
+  - Pit stops
+  - Tyre compounds per driver
+  - Team radio
+
+## Data Points
+
+```
+f1.0
+├── info.connection
+├── schedule/
+│   ├── next_race_name / round / circuit / country / date / countdown_days
+│   ├── next_session_name / type / date / countdown_hours
+│   ├── weekend_json          (all sessions of current weekend as JSON)
+│   └── calendar              (full season calendar as JSON)
+├── standings/
+│   ├── drivers               (JSON array)
+│   ├── teams                 (JSON array)
+│   └── last_update
+├── results/
+│   ├── race / qualifying / sprint / fp1 / fp2 / fp3   (JSON arrays)
+│   └── last_update
+└── live/                     (only active during session ±30 min)
+    ├── is_live / session_name / session_status / track_status
+    ├── laps_current / laps_total
+    ├── time_remaining / time_elapsed
+    ├── weather / race_control / top_three
+    ├── drivers / tyres / pit_stops / team_radio
+    └── last_update
+```
+
+## Data Sources
+
+| Channel | Source | Update |
+|---|---|---|
+| `schedule/` | Jolpica API (ergast.com fallback) | Hourly |
+| `standings/` | Jolpica API (ergast.com fallback) | Hourly / after race |
+| `results/` | Jolpica API (ergast.com fallback) | Hourly / after each session |
+| `live/` | F1 Live Timing SignalR WebSocket | Real-time push |
 
 ## VIS1 Widgets
 
 ### F1 Sessions
 
 Session schedule for the current Grand Prix with live countdown. Colors, font sizes, timezone and language are configurable per widget instance in the VIS editor.
-
-## Configuration
-
-Configure the adapter in the ioBroker Admin interface:
-
-- **Update Interval** - Normal polling interval in seconds (default: 3600)
-- **Race Interval** - Fast polling during live sessions in seconds (default: 10)
-- **Dynamic Polling** - Automatically switch to fast polling during sessions (default: enabled)
 
 ## Requirements
 
@@ -39,6 +73,18 @@ Configure the adapter in the ioBroker Admin interface:
 - Internet connection
 
 ## Changelog
+
+### 0.1.3 (2026-03-29)
+
+- (bloop) Complete adapter rewrite — new clean 4-channel data structure
+- (bloop) Replaced OpenF1 REST polling with F1 Live Timing SignalR WebSocket (real-time push)
+- (bloop) Replaced OpenF1 schedule with Jolpica/Ergast API (more reliable, works outside race weekends)
+- (bloop) Added automatic fallback from Jolpica to ergast.com on connectivity issues
+- (bloop) Added 404-safe result fetching — partial failures no longer block other results
+- (bloop) New data points: time_remaining, time_elapsed, laps_current, top_three, team_radio, full season calendar
+- (bloop) Live session detection via schedule timing (±30 min window)
+- (bloop) Automatic result & standings refresh on session end
+- (bloop) Removed telemetry/car-data/location endpoints (not available outside active sessions)
 
 ### 0.1.2 (2026-03-23)
 
@@ -88,4 +134,4 @@ This project is **not affiliated** with, endorsed by, or in any way officially c
 
 **F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
 
-This adapter is intended for personal, non-commercial use only. All data is provided by [OpenF1](https://openf1.org/), an independent community-driven API.
+This adapter is intended for personal, non-commercial use only. Data is sourced from [Jolpica](https://api.jolpi.ca/) (Ergast mirror) and the official F1 Live Timing feed.
