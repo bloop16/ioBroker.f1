@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.2",
+		"version": "0.1.3",
 		"news": {
+			"0.1.3": {
+				"en": "Complete rewrite: SignalR WebSocket, Jolpica schedule API, new 4-channel data structure",
+				"de": "Komplettes Rewrite: SignalR WebSocket, Jolpica Schedule-API, neue 4-Kanal-Datenstruktur",
+				"ru": "Полный рерайт: SignalR WebSocket, Jolpica API расписания, новая 4-канальная структура данных",
+				"pt": "Reescrita completa: SignalR WebSocket, API de calendário Jolpica, nova estrutura de dados em 4 canais",
+				"nl": "Volledige herschrijving: SignalR WebSocket, Jolpica schema-API, nieuwe 4-kanaals datastructuur",
+				"fr": "Réécriture complète : SignalR WebSocket, API calendrier Jolpica, nouvelle structure de données à 4 canaux",
+				"it": "Riscrittura completa: SignalR WebSocket, API calendario Jolpica, nuova struttura dati a 4 canali",
+				"es": "Reescritura completa: SignalR WebSocket, API de calendario Jolpica, nueva estructura de datos de 4 canales",
+				"pl": "Pełna przebudowa: SignalR WebSocket, API kalendarza Jolpica, nowa 4-kanałowa struktura danych",
+				"uk": "Повне переписування: SignalR WebSocket, Jolpica API розкладу, нова 4-канальна структура даних",
+				"zh-cn": "完整重写：SignalR WebSocket、Jolpica 赛程 API、全新四通道数据结构"
+			},
 			"0.1.2": {
 				"en": "Added VIS1 F1 Sessions widget with configurable colors, fonts, countdown and dynamic scaling",
 				"de": "VIS1 F1 Sessions Widget hinzugefügt mit konfigurierbaren Farben, Schriftgrößen, Countdown und dynamischer Skalierung",
