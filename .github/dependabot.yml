@@ -8,7 +8,7 @@ updates:
           timezone: "UTC"
       open-pull-requests-limit: 10
       cooldown:
-          default: 7
+          default-days: 7
       ignore:
           # Ignore major version updates to avoid breaking changes
           - dependency-name: "*"
