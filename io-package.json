@@ -113,7 +113,7 @@
 			"type": "free"
 		},
 		"tier": 3,
-		"restartAdapters": ["vis"]
+		"restartAdapters": ["vis", "vis-2"]
 	},
 	"native": {
 		"favoriteDriver": "",

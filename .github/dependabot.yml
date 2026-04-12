@@ -7,6 +7,8 @@ updates:
           time: "04:17"
           timezone: "UTC"
       open-pull-requests-limit: 10
+      cooldown:
+          default: 7
       ignore:
           # Ignore major version updates to avoid breaking changes
           - dependency-name: "*"
@@ -20,7 +22,7 @@ updates:
           interval: "daily"
           time: "03:00"
           timezone: "UTC"
-      open-pull-requests-limit: 5
+      open-pull-requests-limit: 15
       labels:
           - "dependencies"
           - "automerge"
