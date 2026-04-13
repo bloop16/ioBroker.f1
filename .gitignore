@@ -4,7 +4,8 @@ node_modules/
 # Build output
 
 # IDEs
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 
 # Logs
@@ -25,8 +26,6 @@ coverage/
 .dev-server/
 
 # Package lock (auto-generated)
-package-lock.json
-
 # Package archives
 *.tgz
 
@@ -34,3 +33,6 @@ package-lock.json
 .claude/
 .commitinfo
 .superpowers/
+
+# Skill development
+.github/instructions/*

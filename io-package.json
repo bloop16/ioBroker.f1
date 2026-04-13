@@ -15,45 +15,6 @@
 				"pl": "Pełna przebudowa: SignalR WebSocket, API kalendarza Jolpica, nowa 4-kanałowa struktura danych",
 				"uk": "Повне переписування: SignalR WebSocket, Jolpica API розкладу, нова 4-канальна структура даних",
 				"zh-cn": "完整重写：SignalR WebSocket、Jolpica 赛程 API、全新四通道数据结构"
-			},
-			"0.1.2": {
-				"en": "Added VIS1 F1 Sessions widget with configurable colors, fonts, countdown and dynamic scaling",
-				"de": "VIS1 F1 Sessions Widget hinzugefügt mit konfigurierbaren Farben, Schriftgrößen, Countdown und dynamischer Skalierung",
-				"ru": "Добавлен виджет VIS1 F1 Sessions с настраиваемыми цветами, шрифтами, обратным отсчётом и динамическим масштабированием",
-				"pt": "Adicionado widget VIS1 F1 Sessions com cores, fontes, contagem regressiva e escala dinâmica configuráveis",
-				"nl": "VIS1 F1 Sessions widget toegevoegd met configureerbare kleuren, lettertypen, aftelling en dynamische schaling",
-				"fr": "Ajout du widget VIS1 F1 Sessions avec couleurs, polices, compte à rebours et mise à l'échelle dynamique configurables",
-				"it": "Aggiunto widget VIS1 F1 Sessions con colori, caratteri, conto alla rovescia e ridimensionamento dinamico configurabili",
-				"es": "Se agregó el widget VIS1 F1 Sessions con colores, fuentes, cuenta regresiva y escala dinámica configurables",
-				"pl": "Dodano widget VIS1 F1 Sessions z konfigurowalnymi kolorami, czcionkami, odliczaniem i dynamicznym skalowaniem",
-				"uk": "Додано віджет VIS1 F1 Sessions з налаштовуваними кольорами, шрифтами, зворотним відліком та динамічним масштабуванням",
-				"zh-cn": "新增 VIS1 F1 Sessions 小部件，支持可配置的颜色、字体、倒计时和动态缩放"
-			},
-			"0.1.1": {
-				"en": "Removed widgets, improved repository hygiene (Dependabot, CI/CD, translations)",
-				"de": "Widgets entfernt, verbesserte Repository-Wartung (Dependabot, CI/CD, Übersetzungen)",
-				"ru": "Удалены виджеты, улучшена гигиена репозитория (Dependabot, CI/CD, переводы)",
-				"pt": "Removidos widgets, melhor higiene do repositório (Dependabot, CI/CD, traduções)",
-				"nl": "Widgets verwijderd, verbeterde repositoryhygiëne (Dependabot, CI/CD, vertalingen)",
-				"fr": "Widgets supprimés, meilleure hygiène du référentiel (Dependabot, CI/CD, traductions)",
-				"it": "Widget rimossi, migliorata l'igiene del repository (Dependabot, CI/CD, traduzioni)",
-				"es": "Widgets eliminados, mejor higiene del repositorio (Dependabot, CI/CD, traducciones)",
-				"pl": "Usunięto widżety, poprawiona higiena repozytorium (Dependabot, CI/CD, tłumaczenia)",
-				"uk": "Виджети видалені, покращена гігієна репозиторію (Dependabot, CI/CD, переклади)",
-				"zh-cn": "删除了小部件，改进了存储库卫生（Dependabot、CI/CD、翻译）"
-			},
-			"0.1.0": {
-				"en": "Initial MVP release with calendar and standings",
-				"de": "Initiales MVP-Release mit Kalender und Wertungen",
-				"ru": "Начальный выпуск MVP с календарем и стартовой сеткой",
-				"pt": "Lançamento inicial do MVP com calendário e classificações",
-				"nl": "Initiële MVP-release met kalender en klassement",
-				"fr": "Sortie MVP initiale avec calendrier et classements",
-				"it": "Versione MVP iniziale con calendario e classifiche",
-				"es": "Lanzamiento inicial de MVP con calendario y tablas",
-				"pl": "Początkowa wersja MVP z kalendarzem i klasyfikacją",
-				"uk": "Початковий випуск MVP з календарем та чемпіонатом",
-				"zh-cn": "初始 MVP 版本，包括日历和积分表"
 			}
 		},
 		"titleLang": {
@@ -82,8 +43,20 @@
 			"uk": "Неофіційний адаптер даних Формули 1 з використанням API OpenF1. Не пов'язаний з Formula One.",
 			"zh-cn": "使用 OpenF1 API 的非官方 F1 数据适配器。与一级方程式无关联。"
 		},
-		"authors": ["Martin (bloop) <bloop16@hotmail.com>"],
-		"keywords": ["Formula 1", "F1", "racing", "motorsport", "live data", "standings"],
+		"authors": [
+			{
+				"name": "Martin Rauscher (bloop)",
+				"email": "bloop16@hotmail.com"
+			}
+		],
+		"keywords": [
+			"Formula 1",
+			"F1",
+			"racing",
+			"motorsport",
+			"live data",
+			"standings"
+		],
 		"platform": "Javascript/Node.js",
 		"icon": "f1.png",
 		"enabled": true,
@@ -113,7 +86,10 @@
 			"type": "free"
 		},
 		"tier": 3,
-		"restartAdapters": ["vis", "vis-2"]
+		"restartAdapters": [
+			"vis",
+			"vis-2"
+		]
 	},
 	"native": {
 		"favoriteDriver": "",

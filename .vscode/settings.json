@@ -1,0 +1,22 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^ps -p 23974 -o pid,ppid,user,args --no-headers$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^ps -ef \\| grep -E 'dev-server run\\|iobroker\\.js-controller' \\| grep -v grep \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    },
+    "json.schemas": [
+        {
+            "fileMatch": ["/io-package.json"],
+            "url": "https://raw.githubusercontent.com/ioBroker/ioBroker.js-controller/master/schemas/io-package.json"
+        },
+        {
+            "fileMatch": ["/admin/jsonConfig.json"],
+            "url": "https://raw.githubusercontent.com/ioBroker/adapter-core/master/schemas/config.json"
+        }
+    ]
+}

@@ -7,18 +7,5 @@
 	"Update interval (normal)": "更新间隔（正常）",
 	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "无活跃比赛会话时的更新间隔（秒）（默认：1小时 = 3600秒）",
 	"Update interval (race day)": "更新间隔（比赛日）",
-	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "活跃比赛会话期间的更新间隔（秒）（默认：10秒）。OpenF1限制：3次/秒，30次/分 – 10秒是安全的！",
-	"Legacy Settings (deprecated)": "旧版设置（已弃用）",
-	"The following setting is deprecated. Use dynamic polling instead.": "以下设置已弃用。请改用动态轮询。",
-	"Update Interval (deprecated)": "更新间隔（已弃用）",
-	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "已弃用：请使用动态轮询。启用动态轮询后，此设置将被忽略。",
-	"Favorites (for future highlighting)": "收藏（用于未来高亮显示）",
-	"Favorite Driver": "最喜欢的车手",
-	"e.g., Max Verstappen": "例如：马克斯·维斯塔潘",
-	"Your favorite driver (will be highlighted in future widgets)": "您最喜欢的车手（将在未来的小部件中高亮显示）",
-	"Favorite Team": "最喜欢的车队",
-	"e.g., Red Bull Racing": "例如：红牛车队",
-	"Your favorite team (will be highlighted in future widgets)": "您最喜欢的车队（将在未来的小部件中高亮显示）",
-	"Highlight Color": "高亮颜色",
-	"Color for highlighting favorites (hex code)": "用于高亮收藏的颜色（十六进制代码）"
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "活跃比赛会话期间的更新间隔（秒）（默认：10秒）。OpenF1限制：3次/秒，30次/分 – 10秒是安全的！"
 }

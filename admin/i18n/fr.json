@@ -7,18 +7,5 @@
 	"Update interval (normal)": "Intervalle de mise à jour (normal)",
 	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Intervalle de mise à jour en secondes sans session de course active (défaut : 1 heure = 3600 s)",
 	"Update interval (race day)": "Intervalle de mise à jour (jour de course)",
-	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Intervalle en secondes pendant les sessions de course actives (défaut : 10 s). Limite OpenF1 : 3 req/s, 30 req/min – 10 s est sûr !",
-	"Legacy Settings (deprecated)": "Paramètres hérités (obsolètes)",
-	"The following setting is deprecated. Use dynamic polling instead.": "Ce paramètre est obsolète. Utilisez plutôt l'interrogation dynamique.",
-	"Update Interval (deprecated)": "Intervalle de mise à jour (obsolète)",
-	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "OBSOLÈTE : Utilisez l'interrogation dynamique. Ce paramètre est ignoré si l'interrogation dynamique est activée.",
-	"Favorites (for future highlighting)": "Favoris (pour la mise en évidence future)",
-	"Favorite Driver": "Pilote favori",
-	"e.g., Max Verstappen": "ex. Max Verstappen",
-	"Your favorite driver (will be highlighted in future widgets)": "Votre pilote favori (sera mis en évidence dans les futurs widgets)",
-	"Favorite Team": "Équipe favorite",
-	"e.g., Red Bull Racing": "ex. Red Bull Racing",
-	"Your favorite team (will be highlighted in future widgets)": "Votre équipe favorite (sera mise en évidence dans les futurs widgets)",
-	"Highlight Color": "Couleur de mise en évidence",
-	"Color for highlighting favorites (hex code)": "Couleur pour mettre en évidence les favoris (code hexadécimal)"
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Intervalle en secondes pendant les sessions de course actives (défaut : 10 s). Limite OpenF1 : 3 req/s, 30 req/min – 10 s est sûr !"
 }

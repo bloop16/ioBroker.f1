@@ -7,18 +7,5 @@
 	"Update interval (normal)": "Update interval (normal)",
 	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Update interval in seconds when no race session is active (default: 1 hour = 3600s)",
 	"Update interval (race day)": "Update interval (race day)",
-	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!",
-	"Legacy Settings (deprecated)": "Legacy Settings (deprecated)",
-	"The following setting is deprecated. Use dynamic polling instead.": "The following setting is deprecated. Use dynamic polling instead.",
-	"Update Interval (deprecated)": "Update Interval (deprecated)",
-	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.",
-	"Favorites (for future highlighting)": "Favorites (for future highlighting)",
-	"Favorite Driver": "Favorite Driver",
-	"e.g., Max Verstappen": "e.g., Max Verstappen",
-	"Your favorite driver (will be highlighted in future widgets)": "Your favorite driver (will be highlighted in future widgets)",
-	"Favorite Team": "Favorite Team",
-	"e.g., Red Bull Racing": "e.g., Red Bull Racing",
-	"Your favorite team (will be highlighted in future widgets)": "Your favorite team (will be highlighted in future widgets)",
-	"Highlight Color": "Highlight Color",
-	"Color for highlighting favorites (hex code)": "Color for highlighting favorites (hex code)"
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!"
 }

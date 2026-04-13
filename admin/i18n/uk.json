@@ -7,18 +7,5 @@
 	"Update interval (normal)": "Інтервал оновлення (звичайний)",
 	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Інтервал оновлення в секундах без активної гоночної сесії (за замовчуванням: 1 година = 3600 с)",
 	"Update interval (race day)": "Інтервал оновлення (день перегонів)",
-	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Інтервал у секундах під час активних гоночних сесій (за замовчуванням: 10 с). Ліміт OpenF1: 3 запр./с, 30 запр./хв – 10 с безпечно!",
-	"Legacy Settings (deprecated)": "Застарілі налаштування (deprecated)",
-	"The following setting is deprecated. Use dynamic polling instead.": "Це налаштування застаріло. Використовуйте натомість динамічне опитування.",
-	"Update Interval (deprecated)": "Інтервал оновлення (застарілий)",
-	"DEPRECATED: Use dynamic polling instead. This setting is ignored when dynamic polling is enabled.": "ЗАСТАРІЛО: Використовуйте динамічне опитування. Це налаштування ігнорується, коли динамічне опитування увімкнено.",
-	"Favorites (for future highlighting)": "Обрані (для майбутнього виділення)",
-	"Favorite Driver": "Улюблений гонщик",
-	"e.g., Max Verstappen": "напр., Макс Ферстаппен",
-	"Your favorite driver (will be highlighted in future widgets)": "Ваш улюблений гонщик (буде виділено в майбутніх віджетах)",
-	"Favorite Team": "Улюблена команда",
-	"e.g., Red Bull Racing": "напр., Red Bull Racing",
-	"Your favorite team (will be highlighted in future widgets)": "Ваша улюблена команда (буде виділено в майбутніх віджетах)",
-	"Highlight Color": "Колір виділення",
-	"Color for highlighting favorites (hex code)": "Колір для виділення обраного (шістнадцятковий код)"
+	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Інтервал у секундах під час активних гоночних сесій (за замовчуванням: 10 с). Ліміт OpenF1: 3 запр./с, 30 запр./хв – 10 с безпечно!"
 }

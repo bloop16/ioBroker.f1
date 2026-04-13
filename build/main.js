@@ -119,10 +119,10 @@ class F1 extends utils.Adapter {
         // Initial full data load
         await this.refreshJolpicaData();
         // Hourly Jolpica refresh
-        this.scheduleInterval = setInterval(() => void this.refreshJolpicaData(), 60 * 60 * 1000);
+        this.scheduleInterval = this.setInterval(() => void this.refreshJolpicaData(), 60 * 60 * 1000);
         // Live check every 60 seconds
         await this.checkLiveStatus();
-        this.liveCheckInterval = setInterval(() => void this.checkLiveStatus(), 60 * 1000);
+        this.liveCheckInterval = this.setInterval(() => void this.checkLiveStatus(), 60 * 1000);
         await this.setStateAsync("info.connection", { val: true, ack: true });
     }
     onStateChange(id, state) {
@@ -134,13 +134,13 @@ class F1 extends utils.Adapter {
     onUnload(callback) {
         try {
             if (this.scheduleInterval) {
-                clearInterval(this.scheduleInterval);
+                this.clearInterval(this.scheduleInterval);
             }
             if (this.liveCheckInterval) {
-                clearInterval(this.liveCheckInterval);
+                this.clearInterval(this.liveCheckInterval);
             }
             if (this.reconnectTimeout) {
-                clearTimeout(this.reconnectTimeout);
+                this.clearTimeout(this.reconnectTimeout);
             }
             this.disconnectSignalR();
             callback();
@@ -508,7 +508,7 @@ class F1 extends utils.Adapter {
                 this.ws = null;
                 // Reconnect after 5s if still in live window
                 if (this.currentLiveSession) {
-                    this.reconnectTimeout = setTimeout(() => void this.connectSignalR(), 5000);
+                    this.reconnectTimeout = this.setTimeout(() => void this.connectSignalR(), 5000);
                 }
             });
             this.ws.on("error", (err) => {
@@ -519,7 +519,7 @@ class F1 extends utils.Adapter {
             const msg = error instanceof Error ? error.message : String(error);
             this.log.warn(`F1 Live Timing connect failed: ${msg}`);
             if (this.currentLiveSession) {
-                this.reconnectTimeout = setTimeout(() => void this.connectSignalR(), 15000);
+                this.reconnectTimeout = this.setTimeout(() => void this.connectSignalR(), 15000);
             }
         }
         finally {
@@ -528,7 +528,7 @@ class F1 extends utils.Adapter {
     }
     disconnectSignalR() {
         if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout);
+            this.clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = undefined;
         }
         if (this.ws) {
@@ -833,7 +833,7 @@ class F1 extends utils.Adapter {
                 const msg = error instanceof Error ? error.message : String(error);
                 if (attempt < 2) {
                     this.log.warn(`Standings fetch failed (attempt ${attempt + 1}/3): ${msg}. Retrying in ${delays[attempt] / 1000}s...`);
-                    await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+                    await new Promise(resolve => this.setTimeout(() => resolve(), delays[attempt]));
                 }
                 else {
                     this.log.error(`Failed to update standings after 3 attempts: ${msg}`);
