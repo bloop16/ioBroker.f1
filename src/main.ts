@@ -1114,8 +1114,8 @@ class F1 extends utils.Adapter {
 	/**
 	 * Deep merge two plain objects (for SignalR incremental updates)
 	 *
-	 * @param target
-	 * @param source
+	 * @param target - The target object to merge into
+	 * @param source - The source object to merge from
 	 */
 	private deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
 		const result = { ...target };
