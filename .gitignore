@@ -35,4 +35,4 @@ coverage/
 .superpowers/
 
 # Skill development
-.github/instructions/*
+.github/agents/*
