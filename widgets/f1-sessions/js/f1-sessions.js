@@ -17,6 +17,22 @@
         CHN: "🇨🇳", POR: "🇵🇹"
     };
 
+    var COUNTRY_TO_CODE = {
+        // Vollständige Ländernamen
+        "Japan": "JPN", "Australia": "AUS", "Bahrain": "BHR", "Saudi Arabia": "SAU",
+        "United States": "USA", "Italy": "ITA", "Monaco": "MCO", "Spain": "ESP",
+        "Canada": "CAN", "Austria": "AUT", "Great Britain": "GBR", "Hungary": "HUN",
+        "Belgium": "BEL", "Netherlands": "NLD", "Singapore": "SGP", "Azerbaijan": "AZE",
+        "Mexico": "MEX", "Brazil": "BRA", "Qatar": "QAT", "Abu Dhabi": "ARE",
+        "China": "CHN", "Portugal": "POR", "UAE": "ARE",
+        // Codes (pass-through, falls Ergast schon Codes liefert)
+        "JPN": "JPN", "AUS": "AUS", "BHR": "BHR", "SAU": "SAU", "USA": "USA",
+        "ITA": "ITA", "MCO": "MCO", "ESP": "ESP", "CAN": "CAN", "AUT": "AUT",
+        "GBR": "GBR", "HUN": "HUN", "BEL": "BEL", "NLD": "NLD", "SGP": "SGP",
+        "AZE": "AZE", "MEX": "MEX", "BRA": "BRA", "QAT": "QAT", "ARE": "ARE",
+        "CHN": "CHN", "POR": "POR"
+    };
+
     var GP_NAMES = {
         "Japan": "Japanese GP",       "Australia": "Australian GP",
         "Bahrain": "Bahrain GP",      "Saudi Arabia": "Saudi Arabian GP",
@@ -89,6 +105,36 @@
         return "completed"; // also covers missing/invalid dates (NaN comparisons → false)
     }
 
+    // Transform main.ts ScheduleSession structure to widget-expected format
+    function transformSession(session, index) {
+        var country = session.country || "";
+        var countryCode = COUNTRY_TO_CODE[country] || country || ""; // Fallback: use country as-is if no mapping
+        var circuit = session.circuit || "";
+        var circuitShort = circuit
+            .replace(/ Circuit$/i, "")
+            .replace(/ International$/i, "")
+            .replace(/ Autodrome$/i, "")
+            .replace(/ Street Circuit$/i, "")
+            .trim();
+        var location = circuitShort || circuit; // Fallback to full circuit name if empty
+        var year = new Date(session.startUTC).getFullYear();
+        var sessionKey = (session.round || 0) * 1000 + index;
+
+        return {
+            round: session.round,
+            country_name: country,
+            country_code: countryCode,
+            circuit_short_name: circuitShort,
+            location: location,
+            year: year,
+            session_name: session.name,
+            session_type: session.type,
+            date_start: session.startUTC,
+            date_end: session.endUTC,
+            session_key: sessionKey
+        };
+    }
+
     function sessionIcon(s) {
         if (s.session_type === "Practice") {
             var m = s.session_name.match(/(\d)/);
@@ -117,11 +163,12 @@
 
     // Test-only export of pure helpers (stripped/ignored in production)
     vis.binds["f1"]._test = {
-        FLAGS: FLAGS, GP_NAMES: GP_NAMES,
+        FLAGS: FLAGS, GP_NAMES: GP_NAMES, COUNTRY_TO_CODE: COUNTRY_TO_CODE,
         pad2: pad2, i18n: i18n,
         langToLocale: langToLocale,
         fmtTime: fmtTime, fmtDateShort: fmtDateShort, fmtDateLong: fmtDateLong,
-        sessionStatus: sessionStatus, sessionIcon: sessionIcon, iconColors: iconColors
+        sessionStatus: sessionStatus, transformSession: transformSession,
+        sessionIcon: sessionIcon, iconColors: iconColors
     };
 
     // ── Placeholder helper ──────────────────────────────────────────────────
@@ -361,7 +408,7 @@
         if (!$div.length) { return; }
 
         var props = {
-            oid:              "f1.0.weekend_sessions.sessions_json",
+            oid:              "f1.0.schedule.weekend_json",
             color_accent:     data.attr("color_accent")     || "#e10600",
             color_bg:         data.attr("color_bg")         || "#15151f",
             color_card:       data.attr("color_card")       || "#1a1a28",
@@ -402,19 +449,32 @@
         }
 
         function applyData(jsonVal) {
+            console.log("[f1-sessions] applyData called, jsonVal type:", typeof jsonVal, "val:", jsonVal);
+            
             if (!jsonVal) {
                 $div.html(placeholder(i18n("waiting", lang), props.color_bg));
                 applyScale();
                 return;
             }
-            var sessions;
+            var rawSessions;
             try {
-                sessions = typeof jsonVal === "object" ? jsonVal : JSON.parse(jsonVal);
+                rawSessions = typeof jsonVal === "object" ? jsonVal : JSON.parse(jsonVal);
+                console.log("[f1-sessions] Parsed sessions:", rawSessions.length, "sessions");
             } catch (e) {
                 $div.html(placeholder(i18n("invalid", lang), props.color_bg));
-                console.warn("f1-sessions: JSON parse error", e);
+                console.warn("[f1-sessions] JSON parse error", e);
                 return;
             }
+            
+            // Transform main.ts ScheduleSession format to widget format
+            var sessions = [];
+            if (rawSessions && rawSessions.length) {
+                for (var i = 0; i < rawSessions.length; i++) {
+                    sessions.push(transformSession(rawSessions[i], i));
+                }
+                console.log("[f1-sessions] Transformed sessions:", sessions);
+            }
+            
             $div.html(vis.binds["f1"].renderSessions(sessions, props, widgetID));
             applyScale();
             vis.binds["f1"].startCountdown(widgetID, sessions, props);
@@ -427,19 +487,26 @@
         }
 
         // Initial state value
+        console.log("[f1-sessions] Widget initialized, OID:", oid);
         vis.conn.getStates(oid, function (err, states) {
+            console.log("[f1-sessions] getStates callback - err:", err, "states:", states);
             if (!err && states && states[oid] && states[oid].val) {
+                console.log("[f1-sessions] Initial state value found");
                 applyData(states[oid].val);
             } else {
+                console.log("[f1-sessions] No initial state value");
                 $div.html(placeholder(i18n("waiting", lang), props.color_bg));
                 applyScale();
             }
         });
 
         // Live updates
+        console.log("[f1-sessions] Subscribing to:", oid);
         vis.conn.subscribe([oid]);
         vis.conn._socket.on("stateChange", function (id, state) {
+            console.log("[f1-sessions] stateChange event - id:", id, "state:", state);
             if (id === oid && $("#" + widgetID).length) {
+                console.log("[f1-sessions] State change for our OID");
                 applyData(state ? state.val : null);
             }
         });

@@ -60,12 +60,6 @@ f1.0
 | `results/` | Jolpica API (ergast.com fallback) | Hourly / after each session |
 | `live/` | F1 Live Timing SignalR WebSocket | Real-time push |
 
-## VIS1 Widgets
-
-### F1 Sessions
-
-Session schedule for the current Grand Prix with live countdown. Colors, font sizes, timezone and language are configurable per widget instance in the VIS editor.
-
 ## Requirements
 
 - ioBroker >= 5.0.19
@@ -73,6 +67,10 @@ Session schedule for the current Grand Prix with live countdown. Colors, font si
 - Internet connection
 
 ## Changelog
+
+### 0.1.4 (2026-04-15)
+
+- (bloop) Removed VIS1 widgets (development discontinued)
 
 ### 0.1.3 (2026-03-29)
 
@@ -88,9 +86,7 @@ Session schedule for the current Grand Prix with live countdown. Colors, font si
 
 ### 0.1.2 (2026-03-23)
 
-- (bloop) Added VIS1 F1 Sessions widget with configurable colors, fonts and countdown
-- (bloop) Dynamic widget scaling to any size in VIS editor
-- (bloop) Countdown shows days, hours, minutes, seconds
+- (bloop) Widget development (discontinued in 0.1.4)
 
 ### 0.1.1 (2026-03-22)
 

@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.3",
+		"version": "0.1.4",
 		"news": {
+			"0.1.4": {
+				"en": "Removed VIS1 widgets (development discontinued)",
+				"de": "VIS1-Widgets entfernt (Entwicklung eingestellt)",
+				"ru": "Удалены виджеты VIS1 (разработка прекращена)",
+				"pt": "Widgets VIS1 removidos (desenvolvimento descontinuado)",
+				"nl": "VIS1-widgets verwijderd (ontwikkeling stopgezet)",
+				"fr": "Widgets VIS1 supprimés (développement arrêté)",
+				"it": "Widget VIS1 rimossi (sviluppo interrotto)",
+				"es": "Widgets VIS1 eliminados (desarrollo descontinuado)",
+				"pl": "Usunięto widgety VIS1 (rozwój przerwany)",
+				"uk": "Видалено віджети VIS1 (розробку припинено)",
+				"zh-cn": "移除 VIS1 小部件（开发已停止）"
+			},
 			"0.1.3": {
 				"en": "Complete rewrite: SignalR WebSocket, Jolpica schedule API, new 4-channel data structure",
 				"de": "Komplettes Rewrite: SignalR WebSocket, Jolpica Schedule-API, neue 4-Kanal-Datenstruktur",
@@ -85,11 +98,7 @@
 			"license": "MIT",
 			"type": "free"
 		},
-		"tier": 3,
-		"restartAdapters": [
-			"vis",
-			"vis-2"
-		]
+		"tier": 3
 	},
 	"native": {
 		"favoriteDriver": "",

@@ -21,3 +21,45 @@
     <% vis.binds["f1"].createSessionsWidget(this.data.attr('wid'), this.view, this.data, this.style); %>
   </div>
 </script>
+
+<!-- ── F1 Debug Widget ────────────────────────────────────── -->
+<script id="tplF1Debug"
+        type="text/ejs"
+        class="vis-tpl"
+        data-vis-set="f1"
+        data-vis-type="helper"
+        data-vis-name="F1 Debug (State anzeigen)"
+        data-vis-attrs="oid/id">
+  <div class="vis-widget <%== this.data.attr('class') %>"
+       style="overflow:auto;padding:10px;background:#1a1a28;color:#fff;font-family:monospace;font-size:11px;line-height:1.5;">
+    <div style="font-weight:bold;margin-bottom:10px;color:#00bcd4;">
+      F1 Adapter Debug
+    </div>
+    <div style="margin-bottom:5px;">
+      <strong>State:</strong> <%= this.data.attr('oid') || 'f1.0.schedule.weekend_json' %>
+    </div>
+    <div style="margin-bottom:5px;">
+      <strong>Wert:</strong>
+      <pre style="margin:5px 0;padding:10px;background:#0d0d15;border-radius:4px;overflow:auto;max-height:400px;"><%= vis.states.attr(this.data.attr('oid') || 'f1.0.schedule.weekend_json' + '.val') %></pre>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#2a2a3a;border-radius:4px;">
+      <strong>Info:</strong> Wenn hier JSON-Daten stehen, empfängt VIS die Daten korrekt.
+      Wenn hier "null" oder nichts steht, prüfen Sie im ioBroker Admin, ob der State einen Wert hat.
+    </div>
+  </div>
+</script>
+
+<script id="tplF1Sessions"
+        type="text/ejs"
+        class="vis-tpl"
+        data-vis-set="f1"
+        data-vis-type="static"
+        data-vis-name="F1 Sessions"
+        data-vis-prev='<div style="width:120px;height:80px;background:#15151f;border-radius:6px;display:flex;flex-direction:column;overflow:hidden;"><div style="background:linear-gradient(135deg,#e10600,#a00400);padding:6px 8px;"><div style="font-size:8px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">Japanese GP</div><div style="font-size:6px;color:rgba(255,255,255,0.7);">Suzuka · 2026</div></div><div style="padding:4px 6px;display:flex;flex-direction:column;gap:2px;"><div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;border-radius:2px;background:rgba(0,188,212,0.2);color:#00bcd4;font-size:5px;display:flex;align-items:center;justify-content:center;font-weight:800;">FP1</div><div style="font-size:6px;color:#eee;">Practice 1</div><div style="font-size:6px;color:#888;margin-left:auto;">11:30</div></div><div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;border-radius:2px;background:rgba(255,214,0,0.2);color:#ffd600;font-size:5px;display:flex;align-items:center;justify-content:center;font-weight:800;">Q</div><div style="font-size:6px;color:#eee;">Qualifying</div><div style="font-size:6px;color:#888;margin-left:auto;">15:00</div></div></div></div>'
+        data-vis-attrs="color_accent[#e10600]/color;color_bg[#15151f]/color;color_card[#1a1a28]/color;color_text[#eeeeef]/color;color_text_muted[#666678]/color;font_size_header[22px];font_size_session[13px];font_size_time[16px];font_size_countdown[24px];timezone[Europe/Vienna];language[de];show_countdown[true]/checkbox">
+  <div class="vis-widget <%== this.data.attr('class') %>"
+       id="<%= this.data.attr('wid') %>"
+       style="width:440px;height:600px;overflow:hidden;">
+    <% vis.binds["f1"].createSessionsWidget(this.data.attr('wid'), this.view, this.data, this.style); %>
+  </div>
+</script>
