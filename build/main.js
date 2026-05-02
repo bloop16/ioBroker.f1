@@ -101,8 +101,17 @@ class F1 extends utils.Adapter {
     tyreStintData = {};
     pitStopData = {}; // racing_number → pit stops array
     rcMessages = [];
+    topThreeData = {};
+    teamRadioCaptures = [];
     // Path of the current session (from SessionInfo), used to fetch static files
     sessionPath = "";
+    // Set true in onUnload so fire-and-forget async loops can exit early
+    isUnloading = false;
+    // ExtrapolatedClock: reference point for client-side countdown
+    clockRefUtcMs = 0;
+    clockRefRemainingMs = 0;
+    clockExtrapolating = false;
+    clockInterval;
     constructor(options = {}) {
         super({ ...options, name: "f1" });
         this.ergastApi = axios_1.default.create({
@@ -138,6 +147,7 @@ class F1 extends utils.Adapter {
         this.log.debug(`State change: ${id}`);
     }
     onUnload(callback) {
+        this.isUnloading = true;
         try {
             if (this.scheduleInterval) {
                 this.clearInterval(this.scheduleInterval);
@@ -148,6 +158,7 @@ class F1 extends utils.Adapter {
             if (this.reconnectTimeout) {
                 this.clearTimeout(this.reconnectTimeout);
             }
+            this.stopClockExtrapolation();
             this.disconnectSignalR(true); // full reset on adapter shutdown
             callback();
         }
@@ -214,11 +225,17 @@ class F1 extends utils.Adapter {
                     { id: "is_live", name: "Session Active", type: "boolean", role: "indicator" },
                     { id: "session_name", name: "Session Name", type: "string", role: "text" },
                     { id: "session_status", name: "Session Status", type: "string", role: "text" },
+                    {
+                        id: "session_part",
+                        name: "Qualifying Part (1=Q1 2=Q2 3=Q3 0=N/A)",
+                        type: "number",
+                        role: "value",
+                    },
                     { id: "track_status", name: "Track Status", type: "string", role: "text" },
                     { id: "laps_current", name: "Current Lap", type: "number", role: "value" },
                     { id: "laps_total", name: "Total Laps", type: "number", role: "value" },
                     { id: "time_remaining", name: "Time Remaining", type: "string", role: "text" },
-                    { id: "time_elapsed", name: "Time Elapsed", type: "string", role: "text" },
+                    { id: "clock_utc", name: "Clock Reference UTC", type: "string", role: "date" },
                     { id: "weather", name: "Track Weather (JSON)", type: "string", role: "json" },
                     { id: "race_control", name: "Race Control Messages (JSON)", type: "string", role: "json" },
                     { id: "top_three", name: "Top 3 Drivers (JSON)", type: "string", role: "json" },
@@ -330,7 +347,8 @@ class F1 extends utils.Adapter {
             if (!dt) {
                 return;
             }
-            const startUTC = new Date(`${dt.date}T${dt.time}`);
+            const timeStr = dt.time && (dt.time.endsWith("Z") || dt.time.includes("+")) ? dt.time : `${dt.time}Z`;
+            const startUTC = new Date(`${dt.date}T${timeStr}`);
             const durationMin = SESSION_DURATIONS[name] ?? 90;
             const endUTC = new Date(startUTC.getTime() + durationMin * 60 * 1000);
             sessions.push({
@@ -366,10 +384,14 @@ class F1 extends utils.Adapter {
         }));
         await this.setStateAsync("schedule.calendar", { val: JSON.stringify(calendar, null, 2), ack: true });
         // Next race (keep current race as "next" for 3h after start — same as f1_sensor)
+        const toUTC = (date, time) => {
+            const t = time && (time.endsWith("Z") || time.includes("+")) ? time : `${time}Z`;
+            return new Date(`${date}T${t}`);
+        };
         const GRACE_MS = 3 * 60 * 60 * 1000;
-        const nextRace = races.find(r => new Date(`${r.date}T${r.time}`).getTime() + GRACE_MS > now.getTime());
+        const nextRace = races.find(r => toUTC(r.date, r.time).getTime() + GRACE_MS > now.getTime());
         if (nextRace) {
-            const raceDate = new Date(`${nextRace.date}T${nextRace.time}`);
+            const raceDate = toUTC(nextRace.date, nextRace.time);
             const daysUntil = Math.max(0, Math.ceil((raceDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
             await this.setStateAsync("schedule.next_race_name", { val: nextRace.raceName, ack: true });
             await this.setStateAsync("schedule.next_race_round", {
@@ -449,11 +471,18 @@ class F1 extends utils.Adapter {
                 });
                 // Connect SignalR if not already connected or connecting
                 if (!this.ws || this.ws.readyState === ws_1.default.CLOSED) {
+                    // Cancel pending reconnect timer to avoid dual connection attempts
+                    if (this.reconnectTimeout) {
+                        this.clearTimeout(this.reconnectTimeout);
+                        this.reconnectTimeout = undefined;
+                    }
                     void this.connectSignalR();
                 }
             }
             else {
                 await this.setStateAsync("live.is_live", { val: false, ack: true });
+                await this.setStateAsync("live.session_part", { val: 0, ack: true });
+                this.stopClockExtrapolation();
                 if (this.ws) {
                     this.disconnectSignalR(true); // full reset: session ended, wipe driver metadata
                 }
@@ -482,6 +511,11 @@ class F1 extends utils.Adapter {
             return;
         }
         this.wsConnecting = true;
+        // Clear all per-session caches before each new connection so that the
+        // R-replay after /start always starts with a clean slate — prevents
+        // duplicate race-control messages, team-radio captures, and pit stops
+        // from being re-appended on reconnect.
+        this.disconnectSignalR(false);
         try {
             // 1. Negotiate to get connection token + cookies
             const negRes = await this.ltApi.get("/signalr/negotiate", {
@@ -585,6 +619,8 @@ class F1 extends utils.Adapter {
         this.tyreStintData = {};
         this.pitStopData = {};
         this.rcMessages = [];
+        this.topThreeData = {};
+        this.teamRadioCaptures = [];
         // Only wipe driver metadata (names, teams) on a full session end.
         // Transient reconnects keep it so the drivers list stays populated
         // while awaiting the next /start replay.
@@ -646,6 +682,9 @@ class F1 extends utils.Adapter {
                     await this.publishDrivers();
                     break;
                 case "TimingData":
+                    if (data?.SessionPart != null) {
+                        await this.onSessionPart(data.SessionPart);
+                    }
                     if (data?.Lines) {
                         this.timingData = this.deepMerge(this.timingData, data.Lines);
                         await this.publishDrivers();
@@ -682,6 +721,9 @@ class F1 extends utils.Adapter {
     }
     async onTrackStatus(data) {
         const statusCode = String(data?.Status ?? "");
+        if (!statusCode) {
+            return;
+        }
         const mapped = TRACK_STATUS_MAP[statusCode] ?? data?.Message ?? statusCode;
         await this.setStateAsync("live.track_status", { val: mapped, ack: true });
     }
@@ -692,6 +734,12 @@ class F1 extends utils.Adapter {
             return;
         }
         await this.setStateAsync("live.session_status", { val: status, ack: true });
+    }
+    async onSessionPart(part) {
+        const num = parseInt(String(part), 10);
+        if (!isNaN(num) && num >= 0 && num <= 3) {
+            await this.setStateAsync("live.session_part", { val: num, ack: true });
+        }
     }
     async onSessionInfo(data) {
         const name = String(data?.Name ?? data?.Type ?? "");
@@ -730,13 +778,13 @@ class F1 extends utils.Adapter {
     }
     async onWeatherData(data) {
         const weather = {
-            air_temperature: parseFloat(data?.AirTemp ?? 0),
-            track_temperature: parseFloat(data?.TrackTemp ?? 0),
-            humidity: parseFloat(data?.Humidity ?? 0),
-            pressure: parseFloat(data?.Pressure ?? 0),
-            rainfall: parseFloat(data?.Rainfall ?? 0),
-            wind_speed: parseFloat(data?.WindSpeed ?? 0),
-            wind_direction: parseInt(String(data?.WindDirection ?? 0), 10),
+            air_temperature: parseFloat(data?.AirTemp || 0),
+            track_temperature: parseFloat(data?.TrackTemp || 0),
+            humidity: parseFloat(data?.Humidity || 0),
+            pressure: parseFloat(data?.Pressure || 0),
+            rainfall: parseFloat(data?.Rainfall || 0),
+            wind_speed: parseFloat(data?.WindSpeed || 0),
+            wind_direction: parseInt(String(data?.WindDirection || 0), 10),
         };
         await this.setStateAsync("live.weather", { val: JSON.stringify(weather, null, 2), ack: true });
     }
@@ -755,15 +803,68 @@ class F1 extends utils.Adapter {
         }
     }
     async onExtrapolatedClock(data) {
-        if (data?.Remaining != null) {
-            await this.setStateAsync("live.time_remaining", {
-                val: String(data.Remaining),
-                ack: true,
-            });
+        const remainingStr = String(data?.Remaining ?? "");
+        const utcStr = String(data?.Utc ?? "");
+        const extrapolating = data?.Extrapolating === true;
+        if (remainingStr) {
+            await this.setStateAsync("live.time_remaining", { val: remainingStr, ack: true });
         }
-        if (data?.Elapsed != null) {
-            await this.setStateAsync("live.time_elapsed", { val: String(data.Elapsed), ack: true });
+        if (utcStr) {
+            await this.setStateAsync("live.clock_utc", { val: utcStr, ack: true });
         }
+        // Store reference point for client-side extrapolation
+        if (utcStr && remainingStr) {
+            this.clockRefUtcMs = new Date(utcStr).getTime();
+            this.clockRefRemainingMs = this.parseRemainingToMs(remainingStr);
+            this.clockExtrapolating = extrapolating;
+        }
+        if (extrapolating) {
+            this.startClockExtrapolation();
+        }
+        else {
+            this.stopClockExtrapolation();
+        }
+    }
+    startClockExtrapolation() {
+        if (this.clockInterval) {
+            return;
+        }
+        this.clockInterval = this.setInterval(() => void this.tickClock(), 1000);
+    }
+    stopClockExtrapolation() {
+        if (this.clockInterval) {
+            this.clearInterval(this.clockInterval);
+            this.clockInterval = undefined;
+        }
+    }
+    async tickClock() {
+        if (!this.clockExtrapolating) {
+            this.stopClockExtrapolation();
+            return;
+        }
+        const elapsedMs = Date.now() - this.clockRefUtcMs;
+        const remainingMs = Math.max(0, this.clockRefRemainingMs - elapsedMs);
+        await this.setStateAsync("live.time_remaining", {
+            val: this.formatRemainingMs(remainingMs),
+            ack: true,
+        });
+        if (remainingMs === 0) {
+            this.stopClockExtrapolation();
+        }
+    }
+    parseRemainingToMs(str) {
+        const parts = str.split(":");
+        if (parts.length === 3) {
+            return (parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2])) * 1000;
+        }
+        return 0;
+    }
+    formatRemainingMs(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     }
     async onRaceControl(data) {
         // Messages can come as object {"0": {...}, "1": {...}} or array
@@ -781,21 +882,28 @@ class F1 extends utils.Adapter {
         });
     }
     async onTopThree(data) {
-        // Lines can be an array or an object keyed by index from the initial replay
-        let lines;
-        if (Array.isArray(data?.Lines)) {
-            lines = data.Lines;
+        if (data?.SessionPart != null) {
+            await this.onSessionPart(data.SessionPart);
         }
-        else if (data?.Lines && typeof data.Lines === "object") {
-            lines = Object.values(data.Lines);
-        }
-        else {
-            lines = [];
-        }
-        if (lines.length === 0) {
+        if (!data?.Lines) {
             return;
         }
-        const top3 = lines.slice(0, 3).map((l) => ({
+        if (Array.isArray(data.Lines)) {
+            // Full replay: replace cache entirely, keyed by array index
+            this.topThreeData = {};
+            data.Lines.forEach((l, i) => {
+                this.topThreeData[String(i)] = l;
+            });
+        }
+        else if (typeof data.Lines === "object") {
+            // Incremental update: merge into cache so partial updates don't wipe existing entries
+            this.topThreeData = this.deepMerge(this.topThreeData, data.Lines);
+        }
+        const entries = Object.values(this.topThreeData);
+        if (entries.length === 0) {
+            return;
+        }
+        const top3 = entries.slice(0, 3).map((l) => ({
             position: parseInt(String(l.Position ?? 0), 10),
             racing_number: String(l.RacingNumber ?? ""),
             full_name: String(l.FullName ?? ""),
@@ -805,18 +913,27 @@ class F1 extends utils.Adapter {
         await this.setStateAsync("live.top_three", { val: JSON.stringify(top3, null, 2), ack: true });
     }
     async onTeamRadio(data) {
-        const captures = data?.Captures ? Object.values(data.Captures) : Array.isArray(data) ? data : [];
-        if (captures.length === 0) {
+        const incoming = data?.Captures ? Object.values(data.Captures) : Array.isArray(data) ? data : [];
+        if (incoming.length === 0) {
             return;
         }
+        this.teamRadioCaptures.push(...incoming);
+        if (this.teamRadioCaptures.length > 50) {
+            this.teamRadioCaptures = this.teamRadioCaptures.slice(-50);
+        }
         await this.setStateAsync("live.team_radio", {
-            val: JSON.stringify(captures.slice(-10), null, 2),
+            val: JSON.stringify(this.teamRadioCaptures.slice(-10), null, 2),
             ack: true,
         });
     }
     async onPitStops(data) {
-        for (const [num, raw] of Object.entries(data ?? {})) {
-            // R-replay format: {num: {PitStop: [{...}]}} — incremental: {num: [{...}]}
+        // R-replay may wrap all driver data under a top-level "Stops" key:
+        //   {"Stops": {"1": {PitStop: [{...}]}, "3": {...}}}
+        // Incremental updates send the driver map directly:
+        //   {"1": [{...}], "3": [{...}], ...}
+        const driverMap = data?.Stops && typeof data.Stops === "object" && !Array.isArray(data.Stops) ? data.Stops : data;
+        for (const [num, raw] of Object.entries(driverMap ?? {})) {
+            // Per-driver: array directly, or object with PitStop/Stops key
             const incoming = Array.isArray(raw)
                 ? raw
                 : raw && typeof raw === "object"
@@ -829,13 +946,14 @@ class F1 extends utils.Adapter {
             // Incremental updates add individual stops — append to existing cache.
             const existing = this.pitStopData[num] ?? [];
             if (existing.length === 0) {
-                // First data for this driver (replay or session start)
                 this.pitStopData[num] = incoming.map(p => ({ racing_number: num, ...p }));
             }
             else {
-                // Incremental: append only truly new stops (deduplicate by Lap)
+                // Incremental: append only truly new stops (deduplicate by lap number)
                 for (const p of incoming) {
-                    if (!existing.some(e => e.Lap === p.Lap)) {
+                    const lapKey = p.Lap ?? p.lap ?? p.LapNumber;
+                    const isDuplicate = lapKey != null && existing.some(e => (e.Lap ?? e.lap ?? e.LapNumber) === lapKey);
+                    if (!isDuplicate) {
                         existing.push({ racing_number: num, ...p });
                     }
                 }
@@ -850,9 +968,15 @@ class F1 extends utils.Adapter {
         }
     }
     async onTyreStints(data) {
+        // R-replay wraps all driver data under a top-level "Stints" key:
+        //   {"Stints": {"1": [{...}], "3": [{...}], ...}}
+        // Incremental updates send the driver map directly:
+        //   {"1": [{...}], "3": [{...}], ...}
+        const driverMap = data?.Stints && typeof data.Stints === "object" && !Array.isArray(data.Stints) ? data.Stints : data;
         const tyres = [];
-        for (const [num, raw] of Object.entries(data ?? {})) {
-            // R-replay format: {num: {Stints: {"0": {...}}}} — incremental: {num: [{...}]}
+        for (const [num, raw] of Object.entries(driverMap ?? {})) {
+            // Per-driver format: array of stint objects (both replay and incremental)
+            // Older format seen in practice: {Stints: {"0": {...}, "1": {...}}}
             let stints;
             if (Array.isArray(raw)) {
                 stints = raw;
@@ -871,13 +995,14 @@ class F1 extends utils.Adapter {
             if (!current || typeof current !== "object") {
                 continue;
             }
-            // Cache compound/new in tyreStintData so publishDrivers can use it
-            this.tyreStintData[num] = current;
+            // Merge into tyreStintData so incremental updates (e.g. only TotalLaps) don't wipe Compound/New
+            this.tyreStintData[num] = { ...(this.tyreStintData[num] ?? {}), ...current };
+            const merged = this.tyreStintData[num];
             tyres.push({
                 racing_number: num,
-                compound: current.Compound ?? "",
-                total_laps: current.TotalLaps ?? 0,
-                is_new: current.New ?? false,
+                compound: merged.Compound ?? "",
+                total_laps: merged.TotalLaps ?? 0,
+                is_new: merged.New ?? false,
             });
         }
         if (tyres.length > 0) {
@@ -982,6 +1107,9 @@ class F1 extends utils.Adapter {
                 if (attempt < 2) {
                     this.log.warn(`Standings fetch failed (attempt ${attempt + 1}/3): ${msg}. Retrying in ${delays[attempt] / 1000}s...`);
                     await new Promise(resolve => this.setTimeout(() => resolve(), delays[attempt]));
+                    if (this.isUnloading) {
+                        return;
+                    }
                 }
                 else {
                     this.log.error(`Failed to update standings after 3 attempts: ${msg}`);
