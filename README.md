@@ -40,7 +40,7 @@ f1.0
 │   ├── teams                 (JSON array)
 │   └── last_update
 ├── results/
-│   ├── race / qualifying / sprint / fp1 / fp2 / fp3   (JSON arrays)
+│   ├── race / qualifying / sprint   (JSON arrays)
 │   └── last_update
 └── live/                     (only active during session ±30 min)
     ├── is_live / session_name / session_status / track_status
@@ -67,6 +67,22 @@ f1.0
 - Internet connection
 
 ## Changelog
+
+### 0.1.6 (2026-05-02)
+
+- (bloop) Remove: `results.fp1`, `results.fp2`, `results.fp3` states — Jolpica/Ergast API does not provide practice session results
+- (bloop) Remove: `results.sprint_qualifying` state — Jolpica/Ergast API does not expose a sprint qualifying endpoint (HTTP 400)
+
+### 0.1.5 (2026-05-02)
+
+- (bloop) Fix: per-session result loading — each session is loaded independently when its scheduled time has passed
+- (bloop) Fix: race result buffer increased to 180 min (was 90 min) to account for race duration + API publishing delay
+- (bloop) Fix: `weekend_json` now shows the currently active race weekend instead of always the next upcoming race
+- (bloop) Fix: `checkLiveStatus` no longer re-fetches the Jolpica schedule API every 60 s — uses cached data from hourly refresh
+- (bloop) Fix: sprint qualifying and practice states are now explicitly set to `null` when the API endpoint is unavailable
+- (bloop) Fix: double-Z bug in date parsing (`new Date("...Z"+"Z")` → Invalid Date) that caused round detection to always return null
+- (bloop) Add: `is_sprint_weekend` flag in `schedule.calendar` JSON entries
+- (bloop) Remove: unused internal `SIGNALR_BASE` constant
 
 ### 0.1.4 (2026-04-15)
 

@@ -87,15 +87,6 @@ interface JolpiaSprintResult {
 	laps: string;
 }
 
-interface JolpiaPracticeResult {
-	position: string;
-	number: string;
-	Driver: { permanentNumber: string; code: string; givenName: string; familyName: string };
-	Constructor: { constructorId: string; name: string };
-	time?: string;
-	laps: string;
-}
-
 interface StateDefinition {
 	id: string;
 	name: string;
@@ -149,7 +140,6 @@ const TRACK_STATUS_MAP: Record<string, string> = {
 class F1 extends utils.Adapter {
 	private readonly JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1";
 	private readonly ERGAST_BASE = "https://ergast.com/api/f1";
-	private readonly SIGNALR_BASE = "https://livetiming.formula1.com/signalr";
 
 	// HTTP clients
 	private ergastApi: ReturnType<typeof axios.create>;
@@ -166,11 +156,19 @@ class F1 extends utils.Adapter {
 	private ws: WebSocket | null = null;
 	private wsConnecting = false;
 
+	// Schedule cache — updated by refreshJolpicaData, reused by checkLiveStatus
+	private cachedRaces: JolpiaRaceEntry[] = [];
+	private cachedSessions: ScheduleSession[] = [];
+
 	// In-memory SignalR stream caches (merged incrementally)
 	private driverList: Record<string, any> = {};
 	private timingData: Record<string, any> = {};
 	private timingAppData: Record<string, any> = {};
+	private tyreStintData: Record<string, any> = {};
+	private pitStopData: Record<string, any[]> = {}; // racing_number → pit stops array
 	private rcMessages: any[] = [];
+	// Path of the current session (from SessionInfo), used to fetch static files
+	private sessionPath = "";
 
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: "f1" });
@@ -227,7 +225,7 @@ class F1 extends utils.Adapter {
 			if (this.reconnectTimeout) {
 				this.clearTimeout(this.reconnectTimeout);
 			}
-			this.disconnectSignalR();
+			this.disconnectSignalR(true); // full reset on adapter shutdown
 			callback();
 		} catch {
 			callback();
@@ -284,9 +282,6 @@ class F1 extends utils.Adapter {
 					{ id: "race", name: "Race Result (JSON)", type: "string", role: "json" },
 					{ id: "qualifying", name: "Qualifying Result (JSON)", type: "string", role: "json" },
 					{ id: "sprint", name: "Sprint Result (JSON)", type: "string", role: "json" },
-					{ id: "fp1", name: "Practice 1 Result (JSON)", type: "string", role: "json" },
-					{ id: "fp2", name: "Practice 2 Result (JSON)", type: "string", role: "json" },
-					{ id: "fp3", name: "Practice 3 Result (JSON)", type: "string", role: "json" },
 					{ id: "last_update", name: "Last Update", type: "string", role: "date" },
 				],
 			},
@@ -347,9 +342,10 @@ class F1 extends utils.Adapter {
 	 */
 	private async fetchErgast(path: string): Promise<any> {
 		// Helper to detect "not found" errors so we don't waste the fallback on them
+		// 400 = Jolpica "Endpoint does not support final filter" → treat as not-available
 		const isNotFound = (e: unknown): boolean => {
 			const status = (e as any)?.response?.status as number | undefined;
-			return status === 404 || status === 410;
+			return status === 400 || status === 404 || status === 410;
 		};
 
 		try {
@@ -357,7 +353,7 @@ class F1 extends utils.Adapter {
 			return res.data;
 		} catch (jolpicaErr) {
 			if (isNotFound(jolpicaErr)) {
-				this.log.debug(`Jolpica 404 for: ${path} — skipping fallback`);
+				this.log.debug(`Jolpica not-available for: ${path} — skipping fallback`);
 				return null;
 			}
 			// Network error / 5xx → try ergast.com
@@ -379,9 +375,12 @@ class F1 extends utils.Adapter {
 		try {
 			const races = await this.fetchSchedule();
 			const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
+			// Cache for reuse by checkLiveStatus (avoids repeated Jolpica requests)
+			this.cachedRaces = races;
+			this.cachedSessions = allSessions;
 			await this.updateScheduleStates(races, allSessions, new Date());
 			void this.updateStandings();
-			void this.updateLatestResults();
+			void this.updateLatestResults(races);
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			this.log.warn(`Jolpica refresh failed: ${msg}`);
@@ -445,7 +444,7 @@ class F1 extends utils.Adapter {
 			return;
 		}
 
-		// Full season calendar
+		// Full season calendar — include sprint weekend flag so clients can distinguish
 		const calendar = races.map(r => ({
 			round: parseInt(r.round, 10),
 			race_name: r.raceName,
@@ -453,6 +452,7 @@ class F1 extends utils.Adapter {
 			country: r.Circuit.Location.country,
 			date: r.date,
 			time: r.time,
+			is_sprint_weekend: !!r.Sprint,
 		}));
 		await this.setStateAsync("schedule.calendar", { val: JSON.stringify(calendar, null, 2), ack: true });
 
@@ -477,8 +477,13 @@ class F1 extends utils.Adapter {
 			});
 			await this.setStateAsync("schedule.next_race_date", { val: raceDate.toISOString(), ack: true });
 			await this.setStateAsync("schedule.next_race_countdown_days", { val: daysUntil, ack: true });
+		}
 
-			const weekendRound = parseInt(nextRace.round, 10);
+		// weekend_json: always show the CURRENT weekend (by detectCurrentRound),
+		// falling back to the next upcoming race if between weekends.
+		const currentRound = this.detectCurrentRound(races, now);
+		const weekendRound = currentRound ?? (nextRace ? parseInt(nextRace.round, 10) : null);
+		if (weekendRound !== null) {
 			const weekendSessions = allSessions.filter(s => s.round === weekendRound);
 			await this.setStateAsync("schedule.weekend_json", {
 				val: JSON.stringify(weekendSessions, null, 2),
@@ -521,8 +526,14 @@ class F1 extends utils.Adapter {
 
 	private async checkLiveStatus(): Promise<void> {
 		try {
-			const races = await this.fetchSchedule();
-			const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
+			// Reuse cached schedule — refreshJolpicaData updates it every hour.
+			// Only fall back to a fresh fetch if the cache is empty (first run race).
+			if (this.cachedRaces.length === 0) {
+				this.cachedRaces = await this.fetchSchedule();
+				this.cachedSessions = this.cachedRaces.flatMap(r => this.buildSessionsFromRace(r));
+			}
+			const races = this.cachedRaces;
+			const allSessions = this.cachedSessions;
 			const now = new Date();
 			const prevSession = this.currentLiveSession;
 			this.currentLiveSession = this.detectLiveSession(allSessions, now);
@@ -533,14 +544,14 @@ class F1 extends utils.Adapter {
 					val: this.currentLiveSession.name,
 					ack: true,
 				});
-				// Connect SignalR if not already connected
+				// Connect SignalR if not already connected or connecting
 				if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
 					void this.connectSignalR();
 				}
 			} else {
 				await this.setStateAsync("live.is_live", { val: false, ack: true });
 				if (this.ws) {
-					this.disconnectSignalR();
+					this.disconnectSignalR(true); // full reset: session ended, wipe driver metadata
 				}
 
 				// Session just ended → refresh results & standings
@@ -551,7 +562,7 @@ class F1 extends utils.Adapter {
 						this.log.info(
 							`Session ended: ${prevSession.name} (round ${prevSession.round}). Refreshing results...`,
 						);
-						void this.updateLatestResults();
+						void this.updateLatestResults(races);
 						if (prevSession.type === "Race") {
 							void this.updateStandings();
 						}
@@ -579,7 +590,8 @@ class F1 extends utils.Adapter {
 					connectionData: '[{"name":"Streaming"}]',
 				},
 			});
-			const token = encodeURIComponent(negRes.data.ConnectionToken as string);
+			const rawToken = negRes.data.ConnectionToken as string;
+			const token = encodeURIComponent(rawToken);
 			const cookies = (negRes.headers["set-cookie"] ?? []).join("; ");
 
 			// 2. Build WebSocket URL
@@ -593,7 +605,9 @@ class F1 extends utils.Adapter {
 			this.ws = new WebSocket(wsUrl, { headers: { Cookie: cookies } });
 
 			this.ws.on("open", () => {
-				this.log.info("F1 Live Timing: WebSocket connected");
+				this.log.info("F1 Live Timing: WebSocket connected — sending Subscribe + /start");
+
+				// Subscribe to all streams
 				const subscribeMsg = JSON.stringify({
 					H: "Streaming",
 					M: "Subscribe",
@@ -601,6 +615,22 @@ class F1 extends utils.Adapter {
 					I: 1,
 				});
 				this.ws!.send(subscribeMsg);
+
+				// Call /start to trigger initial state replay of all subscribed streams.
+				// Without this the server only sends incremental updates going forward,
+				// so DriverList, TrackStatus, TopThree etc. remain empty after a connect.
+				this.ltApi
+					.get("/signalr/start", {
+						params: {
+							clientProtocol: "1.5",
+							transport: "webSockets",
+							connectionData: '[{"name":"Streaming"}]',
+							connectionToken: rawToken,
+						},
+						headers: { Cookie: cookies },
+					})
+					.then(() => this.log.debug("SignalR /start acknowledged"))
+					.catch((e: Error) => this.log.debug(`SignalR /start failed (non-critical): ${e.message}`));
 			});
 
 			this.ws.on("message", (raw: WebSocket.RawData) => {
@@ -638,7 +668,14 @@ class F1 extends utils.Adapter {
 		}
 	}
 
-	private disconnectSignalR(): void {
+	/**
+	 * Disconnect the WebSocket and cancel any pending reconnect.
+	 * Pass `fullReset=true` at session end to clear driver metadata;
+	 * omit (or pass false) for transient reconnects so driver names/teams survive.
+	 *
+	 * @param fullReset - When true, also clears driverList metadata.
+	 */
+	private disconnectSignalR(fullReset = false): void {
 		if (this.reconnectTimeout) {
 			this.clearTimeout(this.reconnectTimeout);
 			this.reconnectTimeout = undefined;
@@ -648,11 +685,19 @@ class F1 extends utils.Adapter {
 			this.ws.close();
 			this.ws = null;
 		}
-		// Reset in-memory caches
-		this.driverList = {};
+		// Always reset per-lap caches so stale timing data doesn't persist
 		this.timingData = {};
 		this.timingAppData = {};
+		this.tyreStintData = {};
+		this.pitStopData = {};
 		this.rcMessages = [];
+		// Only wipe driver metadata (names, teams) on a full session end.
+		// Transient reconnects keep it so the drivers list stays populated
+		// while awaiting the next /start replay.
+		if (fullReset) {
+			this.driverList = {};
+			this.sessionPath = "";
+		}
 	}
 
 	// ── SignalR Message Processing ─────────────────────────────────────────────
@@ -665,6 +710,16 @@ class F1 extends utils.Adapter {
 			return;
 		}
 
+		// Initial state replay sent by the server after /start:
+		// {"R": {"DriverList": {...}, "TimingData": {...}, ...}, "I": "1"}
+		// This is completely separate from M-array incremental updates.
+		if (payload?.R && typeof payload.R === "object") {
+			for (const [stream, data] of Object.entries(payload.R as Record<string, unknown>)) {
+				await this.handleStreamData(stream, data);
+			}
+		}
+
+		// Incremental updates: {"M": [{"H": "Streaming", "M": "feed", "A": [stream, data, ts]}]}
 		for (const msg of payload?.M ?? []) {
 			if (msg.M !== "feed" || !Array.isArray(msg.A) || msg.A.length < 2) {
 				continue;
@@ -675,6 +730,7 @@ class F1 extends utils.Adapter {
 	}
 
 	private async handleStreamData(stream: string, data: any): Promise<void> {
+		this.log.debug(`[SignalR] stream: ${stream} data: ${JSON.stringify(data)?.slice(0, 200)}`);
 		try {
 			switch (stream) {
 				case "TrackStatus":
@@ -741,7 +797,11 @@ class F1 extends utils.Adapter {
 	}
 
 	private async onSessionStatus(data: any): Promise<void> {
-		const status = String(data?.Status ?? data ?? "");
+		const status = String(data?.Status ?? data ?? "").trim();
+		// Ignore empty or placeholder values that are not real F1 session statuses
+		if (!status || status === "no_session") {
+			return;
+		}
 		await this.setStateAsync("live.session_status", { val: status, ack: true });
 	}
 
@@ -749,6 +809,37 @@ class F1 extends utils.Adapter {
 		const name = String(data?.Name ?? data?.Type ?? "");
 		if (name) {
 			await this.setStateAsync("live.session_name", { val: name, ack: true });
+		}
+		// Capture session path and load the static DriverList which has full metadata
+		// (names, teams, colours) that may be absent from SignalR incremental updates.
+		const path = String(data?.Path ?? "").trim();
+		if (path && path !== this.sessionPath) {
+			this.sessionPath = path;
+			void this.fetchStaticDriverList(path);
+		}
+	}
+
+	/**
+	 * Fetch the static DriverList JSON from the F1 live timing server.
+	 * This file contains full driver metadata (FullName, Tla, TeamName, TeamColour)
+	 * which is often absent from mid-session SignalR replays.
+	 *
+	 * @param path - Session path from SessionInfo, e.g. "2026/2026-05-04_Miami_Grand_Prix/2026-05-02_Sprint/"
+	 */
+	private async fetchStaticDriverList(path: string): Promise<void> {
+		try {
+			const url = `/static/${path}DriverList.json`;
+			const res = await this.ltApi.get<Record<string, unknown>>(url);
+			const list = res.data;
+			if (list && typeof list === "object") {
+				this.driverList = this.deepMerge(this.driverList, list as Record<string, any>);
+				this.log.debug(`Static DriverList loaded: ${Object.keys(list).length} drivers from ${path}`);
+				await this.publishDrivers();
+			}
+		} catch (e) {
+			this.log.debug(
+				`Static DriverList fetch failed (non-critical): ${e instanceof Error ? e.message : String(e)}`,
+			);
 		}
 	}
 
@@ -809,7 +900,15 @@ class F1 extends utils.Adapter {
 	}
 
 	private async onTopThree(data: any): Promise<void> {
-		const lines: any[] = Array.isArray(data?.Lines) ? (data.Lines as any[]) : [];
+		// Lines can be an array or an object keyed by index from the initial replay
+		let lines: any[];
+		if (Array.isArray(data?.Lines)) {
+			lines = data.Lines as any[];
+		} else if (data?.Lines && typeof data.Lines === "object") {
+			lines = Object.values(data.Lines);
+		} else {
+			lines = [];
+		}
 		if (lines.length === 0) {
 			return;
 		}
@@ -835,17 +934,35 @@ class F1 extends utils.Adapter {
 	}
 
 	private async onPitStops(data: any): Promise<void> {
-		const stops: any[] = [];
-		for (const [num, pits] of Object.entries(data ?? {})) {
-			if (Array.isArray(pits)) {
-				for (const p of pits) {
-					stops.push({ racing_number: num, ...(p as object) });
+		for (const [num, raw] of Object.entries(data ?? {})) {
+			// R-replay format: {num: {PitStop: [{...}]}} — incremental: {num: [{...}]}
+			const incoming: any[] = Array.isArray(raw)
+				? raw
+				: raw && typeof raw === "object"
+					? Object.values((raw as any).PitStop ?? (raw as any).Stops ?? raw)
+					: [];
+			if (incoming.length === 0) {
+				continue;
+			}
+			// R-replay delivers all stops for this driver at once — use as replacement.
+			// Incremental updates add individual stops — append to existing cache.
+			const existing = this.pitStopData[num] ?? [];
+			if (existing.length === 0) {
+				// First data for this driver (replay or session start)
+				this.pitStopData[num] = incoming.map(p => ({ racing_number: num, ...p }));
+			} else {
+				// Incremental: append only truly new stops (deduplicate by Lap)
+				for (const p of incoming) {
+					if (!existing.some(e => e.Lap === p.Lap)) {
+						existing.push({ racing_number: num, ...p });
+					}
 				}
 			}
 		}
-		if (stops.length > 0) {
+		const allStops = Object.values(this.pitStopData).flat();
+		if (allStops.length > 0) {
 			await this.setStateAsync("live.pit_stops", {
-				val: JSON.stringify(stops, null, 2),
+				val: JSON.stringify(allStops, null, 2),
 				ack: true,
 			});
 		}
@@ -853,16 +970,32 @@ class F1 extends utils.Adapter {
 
 	private async onTyreStints(data: any): Promise<void> {
 		const tyres: any[] = [];
-		for (const [num, stints] of Object.entries(data ?? {})) {
-			if (Array.isArray(stints) && stints.length > 0) {
-				const current = stints[stints.length - 1];
-				tyres.push({
-					racing_number: num,
-					compound: current.Compound ?? "",
-					total_laps: current.TotalLaps ?? 0,
-					is_new: current.New ?? false,
-				});
+		for (const [num, raw] of Object.entries(data ?? {})) {
+			// R-replay format: {num: {Stints: {"0": {...}}}} — incremental: {num: [{...}]}
+			let stints: any[];
+			if (Array.isArray(raw)) {
+				stints = raw;
+			} else if (raw && typeof raw === "object") {
+				const inner = (raw as any).Stints;
+				stints = inner ? Object.values(inner) : Object.values(raw);
+			} else {
+				continue;
 			}
+			if (stints.length === 0) {
+				continue;
+			}
+			const current = stints[stints.length - 1];
+			if (!current || typeof current !== "object") {
+				continue;
+			}
+			// Cache compound/new in tyreStintData so publishDrivers can use it
+			this.tyreStintData[num] = current;
+			tyres.push({
+				racing_number: num,
+				compound: current.Compound ?? "",
+				total_laps: current.TotalLaps ?? 0,
+				is_new: current.New ?? false,
+			});
 		}
 		if (tyres.length > 0) {
 			await this.setStateAsync("live.tyres", { val: JSON.stringify(tyres, null, 2), ack: true });
@@ -881,23 +1014,30 @@ class F1 extends utils.Adapter {
 			}
 			const timing = this.timingData[num] ?? {};
 			const appData = this.timingAppData[num] ?? {};
-			const stints: any[] = appData?.Stints ? Object.values(appData.Stints) : [];
-			const currentStint = stints.length > 0 ? stints[stints.length - 1] : null;
+			// Tyre: prefer TyreStintSeries cache (has Compound), fall back to TimingAppData stints
+			const tyreCached = this.tyreStintData[num];
+			const appStints: any[] = appData?.Stints ? Object.values(appData.Stints) : [];
+			const appStint = appStints.length > 0 ? appStints[appStints.length - 1] : null;
+			const compound = tyreCached?.Compound ?? appStint?.Compound ?? null;
+			const tyreLaps = tyreCached?.TotalLaps ?? appStint?.TotalLaps ?? null;
+			const tyreNew = tyreCached?.New ?? appStint?.New ?? null;
 
 			const position = parseInt(String(timing?.Position ?? 0), 10) || null;
 			drivers.push({
 				racing_number: info.RacingNumber ?? num,
-				full_name: info.FullName ?? "",
-				name_acronym: info.Tla ?? "",
+				// FullName, Tla, TeamName, TeamColour come from the static DriverList.
+				// BroadcastName is a fallback if the static fetch hasn't completed yet.
+				full_name: info.FullName ?? info.BroadcastName ?? "",
+				name_acronym: info.Tla ?? info.Abbreviation ?? "",
 				team_name: info.TeamName ?? "",
-				team_colour: info.TeamColour ?? "",
+				team_colour: info.TeamColour ?? info.TeamColor ?? "",
 				position,
 				gap_to_leader: timing?.GapToLeader ?? null,
 				interval: timing?.IntervalToPositionAhead?.Value ?? null,
 				last_lap_time: timing?.LastLapTime?.Value ?? null,
-				tyre_compound: currentStint?.Compound ?? null,
-				tyre_laps: currentStint?.TotalLaps ?? null,
-				tyre_new: currentStint?.New ?? null,
+				tyre_compound: compound,
+				tyre_laps: tyreLaps,
+				tyre_new: tyreNew,
 			});
 		}
 
@@ -979,7 +1119,63 @@ class F1 extends utils.Adapter {
 
 	// ── Results ───────────────────────────────────────────────────────────────
 
-	private async updateLatestResults(): Promise<void> {
+	/**
+	 * Determine the round number for the current (or most recent) race weekend
+	 * from the schedule. A weekend is considered active from 5 days before the
+	 * race through 1 day after. This is used as the authoritative round number
+	 * so we never show stale results from a previous race when a new weekend has
+	 * started but its main Race / Qualifying haven't happened yet.
+	 *
+	 * @param races - Season race list from Jolpica
+	 * @param now   - Current date
+	 */
+	private detectCurrentRound(races: JolpiaRaceEntry[], now: Date): number | null {
+		if (races.length === 0) {
+			return null;
+		}
+		const BEFORE_MS = 5 * 24 * 60 * 60 * 1000; // weekend starts ~5 days before race day
+		const AFTER_MS = 24 * 60 * 60 * 1000; // keep current for 1 day after race
+
+		// Active weekend: today falls within [raceDate - 5d, raceDate + 1d]
+		for (const race of races) {
+			// race.time already contains the timezone (e.g. "20:00:00Z") — do NOT append Z
+			const raceDate = new Date(`${race.date}T${race.time ?? "14:00:00Z"}`);
+			if (now >= new Date(raceDate.getTime() - BEFORE_MS) && now <= new Date(raceDate.getTime() + AFTER_MS)) {
+				return parseInt(race.round, 10);
+			}
+		}
+
+		// Between weekends: use the most recently completed race
+		const past = races.filter(r => new Date(`${r.date}T${r.time ?? "14:00:00Z"}`) < now);
+		if (past.length > 0) {
+			return parseInt(past[past.length - 1].round, 10);
+		}
+		return null;
+	}
+
+	/**
+	 * Return true if a scheduled session has ended (start time + bufferMinutes has passed).
+	 * The buffer accounts for session duration and API publishing delay.
+	 * Returns false for undefined sessions (e.g. FP2/FP3 on sprint weekends).
+	 *
+	 * @param session       - Session date/time from Jolpica schedule
+	 * @param now           - Current date
+	 * @param bufferMinutes - Minutes after start to consider the session done (default 90)
+	 */
+	private sessionHasPassed(session: JolpiaSessionTime | undefined, now: Date, bufferMinutes = 90): boolean {
+		if (!session) {
+			return false;
+		}
+		// session.time already contains the timezone (e.g. "16:00:00Z") — do NOT append Z
+		const timeStr = session.time || "12:00:00Z";
+		const sessionDate = new Date(`${session.date}T${timeStr}`);
+		if (isNaN(sessionDate.getTime())) {
+			return false;
+		}
+		return now.getTime() > sessionDate.getTime() + bufferMinutes * 60 * 1000;
+	}
+
+	private async updateLatestResults(races: JolpiaRaceEntry[] = []): Promise<void> {
 		const wrap = async (label: string, fn: () => Promise<unknown>): Promise<void> => {
 			try {
 				await fn();
@@ -988,31 +1184,64 @@ class F1 extends utils.Adapter {
 			}
 		};
 
-		let round: number | null = null;
-		await wrap("race", () => this.updateRaceResults());
-		await wrap("qualifying", async () => {
-			round = await this.updateQualifyingResults();
-		});
-		await wrap("sprint", () => this.updateSprintResults());
+		const now = new Date();
+		const scheduleRound = this.detectCurrentRound(races, now);
+		this.log.debug(`Schedule round: ${scheduleRound ?? "unknown"}`);
 
-		if (round != null) {
-			await Promise.allSettled([
-				wrap("fp1", () => this.updatePracticeResults(round!, "fp1", 1)),
-				wrap("fp2", () => this.updatePracticeResults(round!, "fp2", 2)),
-				wrap("fp3", () => this.updatePracticeResults(round!, "fp3", 3)),
-			]);
+		if (scheduleRound == null) {
+			this.log.debug("No current round from schedule — skipping results update");
+			await this.setStateAsync("results.last_update", { val: now.toISOString(), ack: true });
+			return;
 		}
 
-		await this.setStateAsync("results.last_update", { val: new Date().toISOString(), ack: true });
+		const entry = races.find(r => parseInt(r.round, 10) === scheduleRound);
+		if (!entry) {
+			this.log.debug(`No race entry for round ${scheduleRound}`);
+			await this.setStateAsync("results.last_update", { val: now.toISOString(), ack: true });
+			return;
+		}
+
+		// Each session is loaded individually — only when its scheduled time + buffer has passed.
+		// Note: FP1/FP2/FP3 and sprint qualifying are not available via Jolpica/Ergast.
+
+		// ── Sprint (sprint weekends only) ────────────────────────────────────────
+		if (this.sessionHasPassed(entry.Sprint, now)) {
+			await wrap("sprint", () => this.updateSprintResults(scheduleRound));
+		} else {
+			await this.setStateAsync("results.sprint", { val: null, ack: true });
+		}
+
+		// ── Qualifying ───────────────────────────────────────────────────────────
+		if (this.sessionHasPassed(entry.Qualifying, now)) {
+			await wrap("qualifying", () => this.updateQualifyingResults(scheduleRound));
+		} else {
+			await this.setStateAsync("results.qualifying", { val: null, ack: true });
+		}
+
+		// ── Race (buffer 180 min: ~120 min race duration + ~60 min API publishing delay) ──
+		const raceSession: JolpiaSessionTime = { date: entry.date, time: entry.time ?? "14:00:00Z" };
+		if (this.sessionHasPassed(raceSession, now, 180)) {
+			await wrap("race", () => this.updateRaceResults(scheduleRound));
+		} else {
+			await this.setStateAsync("results.race", { val: null, ack: true });
+		}
+
+		await this.setStateAsync("results.last_update", { val: now.toISOString(), ack: true });
 		this.log.info("Results updated");
 	}
 
-	private async updateRaceResults(): Promise<void> {
+	private async updateRaceResults(expectedRound?: number): Promise<number | null> {
 		const data = await this.fetchErgast("/current/last/results.json?limit=100");
 		const race = data?.MRData?.RaceTable?.Races?.[0];
 		if (!race) {
 			this.log.debug("No race results from Ergast");
-			return;
+			return null;
+		}
+		const round = parseInt(race.round, 10);
+		if (expectedRound !== undefined && round !== expectedRound) {
+			this.log.debug(`Race results are for round ${round}, expected ${expectedRound} — clearing stale data`);
+			await this.setStateAsync("results.race", { val: null, ack: true });
+			return null;
 		}
 		const results: SessionResultEntry[] = (race.Results as JolpiaRaceResult[]).map(r => ({
 			position: parseInt(r.positionText, 10) || 0,
@@ -1025,12 +1254,13 @@ class F1 extends utils.Adapter {
 			lap_count: parseInt(r.laps, 10),
 			status: r.status,
 			race_name: race.raceName ?? "",
-			round: parseInt(race.round, 10),
+			round,
 		}));
 		await this.setStateAsync("results.race", { val: JSON.stringify(results, null, 2), ack: true });
+		return round;
 	}
 
-	private async updateQualifyingResults(): Promise<number | null> {
+	private async updateQualifyingResults(expectedRound?: number): Promise<number | null> {
 		const data = await this.fetchErgast("/current/last/qualifying.json?limit=100");
 		const race = data?.MRData?.RaceTable?.Races?.[0];
 		if (!race) {
@@ -1038,6 +1268,13 @@ class F1 extends utils.Adapter {
 			return null;
 		}
 		const round = parseInt(race.round, 10);
+		if (expectedRound !== undefined && round !== expectedRound) {
+			this.log.debug(
+				`Qualifying results are for round ${round}, expected ${expectedRound} — clearing stale data`,
+			);
+			await this.setStateAsync("results.qualifying", { val: null, ack: true });
+			return null;
+		}
 		const results: SessionResultEntry[] = (race.QualifyingResults as JolpiaQualifyingResult[]).map(r => ({
 			position: parseInt(r.position, 10),
 			driver_number: parseInt(r.number, 10),
@@ -1060,12 +1297,21 @@ class F1 extends utils.Adapter {
 		return round;
 	}
 
-	private async updateSprintResults(): Promise<void> {
+	/**
+	 * Fetch sprint results for a specific round.
+	 * Jolpica returns all season sprints via /current/sprint.json — we filter by round
+	 * so we never show a stale sprint from a previous weekend.
+	 *
+	 * @param currentRound - The race round number to load sprint results for.
+	 */
+	private async updateSprintResults(currentRound: number): Promise<void> {
 		const data = await this.fetchErgast("/current/sprint.json?limit=100");
 		const races: any[] = data?.MRData?.RaceTable?.Races ?? [];
-		const race = races[races.length - 1];
+		// Only use sprint data that matches the current round
+		const race = races.find(r => parseInt(r.round, 10) === currentRound);
 		if (!race) {
-			this.log.debug("No sprint results from Ergast");
+			this.log.debug(`No sprint results for round ${currentRound} (may not be available yet)`);
+			await this.setStateAsync("results.sprint", { val: null, ack: true });
 			return;
 		}
 		const results: SessionResultEntry[] = (race.SprintResults as JolpiaSprintResult[]).map(r => ({
@@ -1079,34 +1325,9 @@ class F1 extends utils.Adapter {
 			lap_count: parseInt(r.laps, 10),
 			status: r.status,
 			race_name: race.raceName ?? "",
-			round: parseInt(race.round, 10),
+			round: currentRound,
 		}));
 		await this.setStateAsync("results.sprint", { val: JSON.stringify(results, null, 2), ack: true });
-	}
-
-	private async updatePracticeResults(round: number, stateId: string, num: 1 | 2 | 3): Promise<void> {
-		const data = await this.fetchErgast(`/current/${round}/practice/${num}.json`);
-		const race = data?.MRData?.RaceTable?.Races?.[0];
-		if (!race?.PracticeResults?.length) {
-			this.log.debug(`No Practice ${num} results for round ${round}`);
-			return;
-		}
-		const results: SessionResultEntry[] = (race.PracticeResults as JolpiaPracticeResult[]).map(r => ({
-			position: parseInt(r.position, 10),
-			driver_number: parseInt(r.number, 10),
-			name_acronym: r.Driver.code ?? "",
-			full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
-			team_name: r.Constructor.name,
-			team_colour: this.getTeamColour(r.Constructor.constructorId),
-			best_lap_time: this.parseLapTimeToSeconds(r.time),
-			lap_count: parseInt(r.laps, 10),
-			race_name: race.raceName ?? "",
-			round,
-		}));
-		await this.setStateAsync(`results.${stateId}`, {
-			val: JSON.stringify(results, null, 2),
-			ack: true,
-		});
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────

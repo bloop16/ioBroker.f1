@@ -1,8 +1,34 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.4",
+		"version": "0.1.6",
 		"news": {
+			"0.1.6": {
+				"en": "Removed fp1/fp2/fp3 and sprint_qualifying result states — Jolpica/Ergast API does not provide practice or sprint qualifying results",
+				"de": "Datenpunkte fp1/fp2/fp3 und sprint_qualifying entfernt — Jolpica/Ergast liefert keine Trainings- oder Sprint-Qualifying-Ergebnisse",
+				"ru": "Удалены состояния fp1/fp2/fp3 и sprint_qualifying — API Jolpica/Ergast не предоставляет результаты практик и спринт-квалификации",
+				"pt": "Removidos estados fp1/fp2/fp3 e sprint_qualifying — a API Jolpica/Ergast não fornece resultados de treinos ou sprint qualifying",
+				"nl": "Staten fp1/fp2/fp3 en sprint_qualifying verwijderd — Jolpica/Ergast API levert geen trainings- of sprint-kwalificatieresultaten",
+				"fr": "États fp1/fp2/fp3 et sprint_qualifying supprimés — l'API Jolpica/Ergast ne fournit pas les résultats des essais libres ni du sprint qualifying",
+				"it": "Rimossi gli stati fp1/fp2/fp3 e sprint_qualifying — l'API Jolpica/Ergast non fornisce risultati di prove libere o sprint qualifying",
+				"es": "Eliminados los estados fp1/fp2/fp3 y sprint_qualifying — la API Jolpica/Ergast no proporciona resultados de entrenamientos ni sprint qualifying",
+				"pl": "Usunięto stany fp1/fp2/fp3 i sprint_qualifying — API Jolpica/Ergast nie udostępnia wyników treningów ani sprint qualifying",
+				"uk": "Видалено стани fp1/fp2/fp3 і sprint_qualifying — API Jolpica/Ergast не надає результати тренувань та спринт-кваліфікації",
+				"zh-cn": "移除 fp1/fp2/fp3 和 sprint_qualifying 状态——Jolpica/Ergast API 不提供练习赛或冲刺排位赛成绩"
+			},
+			"0.1.5": {
+				"en": "Fix SignalR live timing: added /start replay, per-session result loading based on schedule dates, double-Z date parsing bug, stale results from previous weekends cleared correctly",
+				"de": "SignalR Live-Timing: /start-Replay ergänzt, sessionbasiertes Ergebnisladen nach Zeitplan, Datumsformat-Bug behoben, veraltete Ergebnisse aus vorherigen Wochenenden werden korrekt geleert",
+				"ru": "Исправление SignalR: добавлен /start-реплей, загрузка результатов по сессиям на основе расписания, исправлена ошибка формата даты, устаревшие данные прошлых уик-эндов очищаются корректно",
+				"pt": "Correcção SignalR: replay /start adicionado, carregamento de resultados por sessão com base no calendário, corrigido bug de formato de data, dados desatualizados de fins de semana anteriores limpos corretamente",
+				"nl": "SignalR reparatie: /start-replay toegevoegd, sessiegebaseerd laden van resultaten op basis van schema, datumformaatfout opgelost, verouderde resultaten van vorige weekenden correct gewist",
+				"fr": "Correction SignalR : replay /start ajouté, chargement des résultats par session selon le calendrier, bug de format de date corrigé, données obsolètes des week-ends précédents effacées correctement",
+				"it": "Fix SignalR: replay /start aggiunto, caricamento risultati per sessione in base al calendario, bug formato data corretto, dati obsoleti da weekend precedenti eliminati correttamente",
+				"es": "Corrección SignalR: replay /start añadido, carga de resultados por sesión según el calendario, bug de formato de fecha corregido, datos obsoletos de fines de semana anteriores eliminados correctamente",
+				"pl": "Naprawa SignalR: dodano replay /start, ładowanie wyników sesji na podstawie harmonogramu, naprawiono błąd formatu daty, nieaktualne wyniki z poprzednich weekendów są poprawnie czyszczone",
+				"uk": "Виправлення SignalR: додано /start-реплей, завантаження результатів по сесіях на основі розкладу, виправлено помилку формату дати, застарілі результати минулих вихідних очищаються коректно",
+				"zh-cn": "修复 SignalR：新增 /start 重播、按赛程日期逐场次加载成绩、修复日期格式双 Z 错误、正确清除上一周末的过期数据"
+			},
 			"0.1.4": {
 				"en": "Removed VIS1 widgets (development discontinued)",
 				"de": "VIS1-Widgets entfernt (Entwicklung eingestellt)",
