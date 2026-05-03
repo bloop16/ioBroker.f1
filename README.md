@@ -68,6 +68,13 @@ f1.0
 
 ## Changelog
 
+### 0.1.7 (2026-05-03)
+
+- (bloop) Add: post-race refresh retry logic — 6 attempts every 10 minutes to ensure Jolpica round data stabilizes after session end
+- (bloop) Add: `getApiRoundStatus()` monitoring function to independently track results vs standings round consistency
+- (bloop) Fix: points discrepancies during race-end window — verified via cross-API analysis that mixed-round data delivery originates from upstream Jolpica, not adapter mapping
+- (bloop) Enhance: `handleSessionEnded()` now triggers immediate Jolpica refresh followed by 6-attempt retry sequence with detailed logging
+
 ### 0.1.6 (2026-05-02)
 
 - (bloop) Remove: `results.fp1`, `results.fp2`, `results.fp3` states — Jolpica/Ergast API does not provide practice session results

@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.6",
+		"version": "0.1.7",
 		"news": {
+			"0.1.7": {
+				"en": "Add robust post-race refresh retry logic — 6 attempts every 10 minutes to ensure Jolpica round data stabilizes. Verified via cross-API analysis that points discrepancies stem from upstream mixed-round data delivery, not adapter mapping.",
+				"de": "Robuste Post-Race-Refresh-Retry-Logik hinzugefügt — 6 Versuche alle 10 Minuten, um sicherzustellen, dass Jolpica-Rundendaten stabil sind. Durch API-Analyse bestätigt: Punktemissstände kommen von Jolpica-Mix-Datenlieferung, nicht vom Adapter.",
+				"ru": "Добавлена надежная логика повторного обновления данных после гонки — 6 попыток каждые 10 минут для стабилизации данных Jolpica. Перекрестная API-проверка подтвердила: расхождения в очках исходят от смешанных данных Jolpica, а не от адаптера.",
+				"pt": "Adicionada lógica robusta de atualização pós-corrida — 6 tentativas a cada 10 minutos para garantir estabilidade dos dados Jolpica. Verificação cruzada de API confirmou: discrepâncias de pontos vêm de entrega de dados misto Jolpica, não do adaptador.",
+				"nl": "Robuuste post-race refresh retry-logica toegevoegd — 6 pogingen elke 10 minuten om Jolpica ronde-data stabiel te houden. Gekruiste API-analyse bevestigd: puntenverschillen komen van gemengde Jolpica-gegevens, niet van adapter.",
+				"fr": "Logique de réessai robuste de rafraîchissement post-course ajoutée — 6 tentatives toutes les 10 minutes pour garantir la stabilité des données Jolpica. Vérification croisée API confirmée : les écarts de points proviennent de la livraison de données mixtes Jolpica, pas de l'adaptateur.",
+				"it": "Aggiunta logica robusta di refresh post-gara — 6 tentativi ogni 10 minuti per garantire la stabilità dei dati Jolpica. Verifica API incrociata confermata: le discrepanze di punti provengono dalla fornitura di dati misti Jolpica, non dall'adattatore.",
+				"es": "Lógica robusta de actualización post-carrera añadida — 6 intentos cada 10 minutos para garantizar la estabilidad de los datos Jolpica. Verificación cruzada de API confirmada: las discrepancias de puntos provienen de la entrega de datos mixtos de Jolpica, no del adaptador.",
+				"pl": "Dodana solidna logika ponownego odświeżania po wyścig — 6 prób co 10 minut, aby zapewnić stabilność danych Jolpica. Potwierdzono wzajemną weryfikację API: rozbieżności w punktach pochodzą z dostarczenia mieszanych danych Jolpica, a nie adaptera.",
+				"uk": "Додана надійна логіка повторного оновлення даних після гонки — 6 спроб кожні 10 хвилин для забезпечення стабільності даних Jolpica. Взаємна перевірка API підтвердила: розбіжності в балах походять від змішаної доставки даних Jolpica, а не від адаптера.",
+				"zh-cn": "添加强大的赛后刷新重试逻辑——每 10 分钟 6 次尝试以确保 Jolpica 轮次数据稳定。交叉 API 验证确认：积分差异来自 Jolpica 混合数据交付，而不是适配器。"
+			},
 			"0.1.6": {
 				"en": "Removed fp1/fp2/fp3 and sprint_qualifying result states — Jolpica/Ergast API does not provide practice or sprint qualifying results",
 				"de": "Datenpunkte fp1/fp2/fp3 und sprint_qualifying entfernt — Jolpica/Ergast liefert keine Trainings- oder Sprint-Qualifying-Ergebnisse",
