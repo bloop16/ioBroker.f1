@@ -27,7 +27,7 @@ Formula 1 live data integration for ioBroker — provides race calendar, champio
 
 ## Data Points
 
-See the **Usage** section above for the complete object hierarchy and update intervals.
+See the **Usage** section below for the complete object hierarchy and update intervals.
 
 ## Data Sources
 
@@ -120,6 +120,8 @@ Data is cached and updated on a schedule. If data appears outdated:
 3. After a session: automatic refresh is triggered within 2 minutes of session end
 
 
+
+## Changelog
 
 ### 0.1.7 (2026-05-03)
 

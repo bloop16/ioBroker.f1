@@ -83,17 +83,17 @@
 			"zh-cn": "F1 实时数据 (非官方)"
 		},
 		"desc": {
-			"en": "Unofficial Formula 1 live data adapter using OpenF1 API. Not affiliated with Formula One.",
+			"en": "Unofficial Formula 1 live data adapter using Jolpica API and F1 Live Timing. Not affiliated with Formula One.",
 			"de": "Formel-1-Live-Daten-Integration - Renninformationen, Wertungen und Live-Session-Tracking",
-			"ru": "Неофициальный адаптер данных Формулы 1 с использованием API OpenF1. Не связан с Formula One.",
-			"pt": "Adaptador não oficial de dados de Fórmula 1 usando a API OpenF1. Não afiliado à Fórmula Um.",
-			"nl": "Inofficiële Formule 1 live data adapter met OpenF1 API. Niet gelieerd aan Formula One.",
-			"fr": "Adaptateur de données F1 non officiel utilisant l'API OpenF1. Non affilié à Formula One.",
-			"it": "Adattatore dati Formula 1 non ufficiale utilizzando l'API OpenF1. Non affiliato a Formula One.",
-			"es": "Adaptador no oficial de datos de Fórmula 1 usando la API OpenF1. No afiliado a Formula One.",
-			"pl": "Nieoficjalny adapter danych Formuły 1 przy użyciu API OpenF1. Niezwiązany z Formula One.",
-			"uk": "Неофіційний адаптер даних Формули 1 з використанням API OpenF1. Не пов'язаний з Formula One.",
-			"zh-cn": "使用 OpenF1 API 的非官方 F1 数据适配器。与一级方程式无关联。"
+			"ru": "Неофициальный адаптер данных Формулы 1 с использованием Jolpica API и F1 Live Timing. Не связан с Formula One.",
+			"pt": "Adaptador não oficial de dados de Fórmula 1 usando Jolpica API e F1 Live Timing. Não afiliado à Fórmula Um.",
+			"nl": "Inofficiële Formule 1 live data adapter met Jolpica API en F1 Live Timing. Niet gelieerd aan Formula One.",
+			"fr": "Adaptateur de données F1 non officiel utilisant l'API Jolpica et F1 Live Timing. Non affilié à Formula One.",
+			"it": "Adattatore dati Formula 1 non ufficiale utilizzando Jolpica API e F1 Live Timing. Non affiliato a Formula One.",
+			"es": "Adaptador no oficial de datos de Fórmula 1 usando Jolpica API y F1 Live Timing. No afiliado a Formula One.",
+			"pl": "Nieoficjalny adapter danych Formuły 1 przy użyciu Jolpica API i F1 Live Timing. Niezwiązany z Formula One.",
+			"uk": "Неофіційний адаптер даних Формули 1 з використанням Jolpica API та F1 Live Timing. Не пов'язаний з Formula One.",
+			"zh-cn": "使用 Jolpica API 和 F1 Live Timing 的非官方 F1 数据适配器。与一级方程式无关联。"
 		},
 		"authors": [
 			{

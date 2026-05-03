@@ -24,6 +24,7 @@ coverage/
 
 # ioBroker dev-server
 .dev-server/
+.cache/
 
 # Package lock (auto-generated)
 # Package archives

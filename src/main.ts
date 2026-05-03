@@ -149,6 +149,7 @@ class F1 extends utils.Adapter {
 	private scheduleInterval?: ioBroker.Interval;
 	private liveCheckInterval?: ioBroker.Interval;
 	private reconnectTimeout?: ioBroker.Timeout;
+	private postSessionRefreshTimeout?: ioBroker.Timeout;
 
 	// Live state
 	private currentLiveSession: ScheduleSession | null = null;
@@ -171,6 +172,16 @@ class F1 extends utils.Adapter {
 	private teamRadioCaptures: any[] = [];
 	// Path of the current session (from SessionInfo), used to fetch static files
 	private sessionPath = "";
+	private liveFallbackActive = false;
+	private liveMeetingRound: number | null = null;
+	private liveMeetingName = "";
+	private liveMeetingCountry = "";
+	private liveSessionName = "";
+	private liveSessionType = "";
+	private liveSessionStartUTC = "";
+	private fallbackSuppressedUntilMs = 0;
+	private postSessionRefreshAttempts = 0;
+	private postSessionTargetRound: number | null = null;
 
 	// Set true in onUnload so fire-and-forget async loops can exit early
 	private isUnloading = false;
@@ -236,6 +247,10 @@ class F1 extends utils.Adapter {
 			}
 			if (this.reconnectTimeout) {
 				this.clearTimeout(this.reconnectTimeout);
+			}
+			if (this.postSessionRefreshTimeout) {
+				this.clearTimeout(this.postSessionRefreshTimeout);
+				this.postSessionRefreshTimeout = undefined;
 			}
 			this.stopClockExtrapolation();
 			this.disconnectSignalR(true); // full reset on adapter shutdown
@@ -314,6 +329,7 @@ class F1 extends utils.Adapter {
 					{ id: "track_status", name: "Track Status", type: "string", role: "text" },
 					{ id: "laps_current", name: "Current Lap", type: "number", role: "value" },
 					{ id: "laps_total", name: "Total Laps", type: "number", role: "value" },
+					{ id: "time_elapsed", name: "Time Elapsed", type: "string", role: "text" },
 					{ id: "time_remaining", name: "Time Remaining", type: "string", role: "text" },
 					{ id: "clock_utc", name: "Clock Reference UTC", type: "string", role: "date" },
 					{ id: "weather", name: "Track Weather (JSON)", type: "string", role: "json" },
@@ -393,13 +409,24 @@ class F1 extends utils.Adapter {
 	private async refreshJolpicaData(): Promise<void> {
 		try {
 			const races = await this.fetchSchedule();
-			const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
-			// Cache for reuse by checkLiveStatus (avoids repeated Jolpica requests)
-			this.cachedRaces = races;
-			this.cachedSessions = allSessions;
-			await this.updateScheduleStates(races, allSessions, new Date());
-			void this.updateStandings();
-			void this.updateLatestResults(races);
+			const now = new Date();
+
+			if (races.length > 0) {
+				const allSessions = races.flatMap(r => this.buildSessionsFromRace(r));
+				// Cache for reuse by checkLiveStatus (avoids repeated Jolpica requests)
+				this.cachedRaces = races;
+				this.cachedSessions = allSessions;
+				await this.updateScheduleStates(races, allSessions, now);
+				void this.updateLatestResults(races);
+			} else if (this.cachedRaces.length > 0) {
+				this.log.debug("Schedule fetch returned no races - using cached schedule for hourly state refresh");
+				await this.updateScheduleStates(this.cachedRaces, this.cachedSessions, now);
+				void this.updateLatestResults(this.cachedRaces);
+			} else {
+				this.log.debug("Schedule fetch returned no races and no cache exists yet");
+			}
+
+			await this.updateStandings();
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			this.log.warn(`Jolpica refresh failed: ${msg}`);
@@ -548,6 +575,226 @@ class F1 extends utils.Adapter {
 		return null;
 	}
 
+	/**
+	 * OpenF1 currently returns a restricted-access message while a live F1 session
+	 * is running. We use this as fallback signal when schedule times lag behind.
+	 */
+	private async detectLiveSessionViaOpenF1(): Promise<boolean> {
+		try {
+			const res = await axios.get<{ detail?: string } | unknown[]>(
+				"https://api.openf1.org/v1/sessions?session_key=latest",
+				{
+					timeout: 5000,
+					headers: { "User-Agent": "ioBroker.f1/1.0" },
+					validateStatus: () => true,
+				},
+			);
+
+			const detail = (res.data as { detail?: string } | undefined)?.detail;
+			if (typeof detail === "string" && detail.includes("Live F1 session in progress")) {
+				return true;
+			}
+
+			// When the endpoint returns an array, no live-session lock is active.
+			if (Array.isArray(res.data)) {
+				return false;
+			}
+
+			return false;
+		} catch (error) {
+			this.log.debug(
+				`OpenF1 live fallback unavailable: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			return false;
+		}
+	}
+
+	private isTerminalSessionStatus(status: string): boolean {
+		const normalized = status.toLowerCase();
+		return ["ends", "ended", "finished", "finalised", "finalized", "inactive", "completed"].includes(normalized);
+	}
+
+	private async handleSessionEnded(reason: string): Promise<void> {
+		if (!this.currentLiveSession) {
+			return;
+		}
+
+		const endedSession = this.currentLiveSession;
+		this.currentLiveSession = null;
+		this.liveFallbackActive = false;
+		// Prevent immediate OpenF1 fallback re-entry after session end.
+		this.fallbackSuppressedUntilMs = Date.now() + 45 * 60 * 1000;
+
+		await this.setStateAsync("live.is_live", { val: false, ack: true });
+		await this.setStateAsync("live.session_part", { val: 0, ack: true });
+		await this.setStateAsync("live.time_elapsed", { val: "00:00:00", ack: true });
+		this.stopClockExtrapolation();
+		if (this.ws) {
+			this.disconnectSignalR(true);
+		}
+
+		const savedKey = `${endedSession.round}-${endedSession.type}`;
+		if (savedKey !== this.lastSavedSession) {
+			this.lastSavedSession = savedKey;
+			this.log.info(
+				`Session ended (${reason}): ${endedSession.name} (round ${endedSession.round}). Refreshing Jolpica data...`,
+			);
+			await this.refreshJolpicaData();
+			this.startPostSessionRefreshRetries(endedSession.round);
+		}
+	}
+
+	private async getApiRoundStatus(): Promise<{ resultsRound: number | null; standingsRound: number | null }> {
+		let resultsRound: number | null = null;
+		let standingsRound: number | null = null;
+
+		try {
+			const resultsData = await this.fetchErgast("/current/last/results.json?limit=1");
+			const parsed = parseInt(String(resultsData?.MRData?.RaceTable?.round ?? ""), 10);
+			if (!isNaN(parsed)) {
+				resultsRound = parsed;
+			}
+		} catch {
+			// non-critical in retry evaluation
+		}
+
+		try {
+			const standingsData = await this.fetchErgast("/current/driverstandings.json?limit=1");
+			const parsed = parseInt(String(standingsData?.MRData?.StandingsTable?.round ?? ""), 10);
+			if (!isNaN(parsed)) {
+				standingsRound = parsed;
+			}
+		} catch {
+			// non-critical in retry evaluation
+		}
+
+		return { resultsRound, standingsRound };
+	}
+
+	private startPostSessionRefreshRetries(targetRound: number): void {
+		if (targetRound <= 0 || this.isUnloading) {
+			return;
+		}
+		if (this.postSessionRefreshTimeout) {
+			this.clearTimeout(this.postSessionRefreshTimeout);
+			this.postSessionRefreshTimeout = undefined;
+		}
+		this.postSessionTargetRound = targetRound;
+		this.postSessionRefreshAttempts = 0;
+		this.scheduleNextPostSessionRefresh();
+	}
+
+	private scheduleNextPostSessionRefresh(): void {
+		const targetRound = this.postSessionTargetRound;
+		if (targetRound === null || this.isUnloading) {
+			return;
+		}
+
+		const MAX_ATTEMPTS = 6;
+		const RETRY_MS = 10 * 60 * 1000;
+
+		if (this.postSessionRefreshAttempts >= MAX_ATTEMPTS) {
+			this.log.info(`Post-session refresh window finished for round ${targetRound}. API may still be delayed.`);
+			this.postSessionTargetRound = null;
+			return;
+		}
+
+		this.postSessionRefreshTimeout = this.setTimeout(async () => {
+			this.postSessionRefreshAttempts += 1;
+			const attempt = this.postSessionRefreshAttempts;
+
+			await this.refreshJolpicaData();
+			const rounds = await this.getApiRoundStatus();
+
+			const resultsReady = rounds.resultsRound !== null && rounds.resultsRound >= targetRound;
+			const standingsReady = rounds.standingsRound !== null && rounds.standingsRound >= targetRound;
+
+			if (resultsReady && standingsReady) {
+				this.log.info(
+					`Post-session refresh complete for round ${targetRound} (attempt ${attempt}): API data now available.`,
+				);
+				this.postSessionTargetRound = null;
+				this.postSessionRefreshTimeout = undefined;
+				return;
+			}
+
+			this.log.info(
+				`Post-session refresh attempt ${attempt}/${MAX_ATTEMPTS} for round ${targetRound}: results round=${rounds.resultsRound ?? "n/a"}, standings round=${rounds.standingsRound ?? "n/a"}`,
+			);
+			this.scheduleNextPostSessionRefresh();
+		}, RETRY_MS);
+	}
+
+	private async applyLiveFallbackScheduleStates(now: Date): Promise<void> {
+		const sessionName = this.liveSessionName || this.currentLiveSession?.name || "Live Session";
+		const sessionType = this.liveSessionType || this.currentLiveSession?.type || "Unknown";
+		const sessionDate = this.liveSessionStartUTC || this.currentLiveSession?.startUTC || now.toISOString();
+
+		await this.setStateAsync("schedule.next_session_name", { val: sessionName, ack: true });
+		await this.setStateAsync("schedule.next_session_type", { val: sessionType, ack: true });
+		await this.setStateAsync("schedule.next_session_date", { val: sessionDate, ack: true });
+		await this.setStateAsync("schedule.next_session_countdown_hours", { val: 0, ack: true });
+	}
+
+	private async updateProvisionalResultsFromLiveData(now: Date): Promise<void> {
+		const sessionLabel = (this.liveSessionName || this.currentLiveSession?.name || "").toLowerCase();
+		let targetState: "results.race" | "results.qualifying" | "results.sprint" | null = null;
+
+		if (sessionLabel.includes("qualifying") && !sessionLabel.includes("sprint")) {
+			targetState = "results.qualifying";
+		} else if (sessionLabel.includes("sprint") && !sessionLabel.includes("qualifying")) {
+			targetState = "results.sprint";
+		} else if (sessionLabel.includes("race")) {
+			targetState = "results.race";
+		}
+
+		if (!targetState) {
+			return;
+		}
+
+		const round = this.liveMeetingRound ?? this.currentLiveSession?.round ?? 0;
+		const raceName = this.liveMeetingName || this.currentLiveSession?.raceName || "";
+		const liveStatus = String((await this.getStateAsync("live.session_status"))?.val ?? "");
+
+		const provisional: SessionResultEntry[] = [];
+		for (const [num, info] of Object.entries(this.driverList)) {
+			if (!info || typeof info !== "object") {
+				continue;
+			}
+			const timing = this.timingData[num] ?? {};
+			const position = parseInt(String(timing?.Position ?? 0), 10);
+			const driverNumber = parseInt(String(info.RacingNumber ?? num), 10);
+			if (isNaN(driverNumber)) {
+				continue;
+			}
+
+			provisional.push({
+				position: !isNaN(position) && position > 0 ? position : 999,
+				driver_number: driverNumber,
+				name_acronym: String(info.Tla ?? info.Abbreviation ?? ""),
+				full_name: String(info.FullName ?? info.BroadcastName ?? ""),
+				team_name: String(info.TeamName ?? ""),
+				team_colour: String(info.TeamColour ?? info.TeamColor ?? "FFFFFF"),
+				best_lap_time: this.parseLapTimeToSeconds(timing?.BestLapTime?.Value ?? timing?.LastLapTime?.Value),
+				lap_count: parseInt(String(timing?.NumberOfLaps ?? timing?.Laps ?? 0), 10) || 0,
+				status: liveStatus || undefined,
+				race_name: raceName || undefined,
+				round: round > 0 ? round : undefined,
+			});
+		}
+
+		if (provisional.length === 0) {
+			return;
+		}
+
+		provisional.sort((a, b) => a.position - b.position);
+		await this.setStateAsync(targetState, {
+			val: JSON.stringify(provisional, null, 2),
+			ack: true,
+		});
+		await this.setStateAsync("results.last_update", { val: now.toISOString(), ack: true });
+	}
+
 	private async checkLiveStatus(): Promise<void> {
 		try {
 			// Reuse cached schedule — refreshJolpicaData updates it every hour.
@@ -561,11 +808,38 @@ class F1 extends utils.Adapter {
 			const now = new Date();
 			const prevSession = this.currentLiveSession;
 			this.currentLiveSession = this.detectLiveSession(allSessions, now);
+			this.liveFallbackActive = false;
+
+			// Fallback for short-notice schedule changes: force live mode if OpenF1
+			// reports an active session although the calendar times are outdated.
+			if (
+				!this.currentLiveSession &&
+				now.getTime() >= this.fallbackSuppressedUntilMs &&
+				(await this.detectLiveSessionViaOpenF1())
+			) {
+				const fallbackRound = this.detectCurrentRound(races, now) ?? 0;
+				this.log.info("Live session detected via OpenF1 fallback (schedule may be outdated)");
+				this.liveFallbackActive = true;
+				this.currentLiveSession = {
+					name: "Live Session",
+					type: "Unknown",
+					startUTC: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
+					endUTC: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+					round: fallbackRound,
+					raceName: "",
+					circuit: "",
+					country: "",
+				};
+			}
 
 			if (this.currentLiveSession) {
+				const sessionNameForState =
+					this.liveFallbackActive && this.liveSessionName
+						? this.liveSessionName
+						: this.currentLiveSession.name;
 				await this.setStateAsync("live.is_live", { val: true, ack: true });
 				await this.setStateAsync("live.session_name", {
-					val: this.currentLiveSession.name,
+					val: sessionNameForState,
 					ack: true,
 				});
 				// Connect SignalR if not already connected or connecting
@@ -577,9 +851,16 @@ class F1 extends utils.Adapter {
 					}
 					void this.connectSignalR();
 				}
+				if (this.liveFallbackActive) {
+					await this.applyLiveFallbackScheduleStates(now);
+					await this.updateProvisionalResultsFromLiveData(now);
+					await this.updateTimeElapsedState(now.getTime());
+				}
 			} else {
+				this.liveFallbackActive = false;
 				await this.setStateAsync("live.is_live", { val: false, ack: true });
 				await this.setStateAsync("live.session_part", { val: 0, ack: true });
+				await this.setStateAsync("live.time_elapsed", { val: "00:00:00", ack: true });
 				this.stopClockExtrapolation();
 				if (this.ws) {
 					this.disconnectSignalR(true); // full reset: session ended, wipe driver metadata
@@ -847,6 +1128,9 @@ class F1 extends utils.Adapter {
 			return;
 		}
 		await this.setStateAsync("live.session_status", { val: status, ack: true });
+		if (this.isTerminalSessionStatus(status)) {
+			await this.handleSessionEnded(`live status=${status}`);
+		}
 	}
 
 	private async onSessionPart(part: unknown): Promise<void> {
@@ -859,8 +1143,45 @@ class F1 extends utils.Adapter {
 	private async onSessionInfo(data: any): Promise<void> {
 		const name = String(data?.Name ?? data?.Type ?? "");
 		if (name) {
+			this.liveSessionName = name;
 			await this.setStateAsync("live.session_name", { val: name, ack: true });
 		}
+
+		const type = String(data?.Type ?? "").trim();
+		if (type) {
+			this.liveSessionType = type;
+		}
+
+		const meetingRound = parseInt(String(data?.Meeting?.Number ?? ""), 10);
+		if (!isNaN(meetingRound) && meetingRound > 0) {
+			this.liveMeetingRound = meetingRound;
+		}
+
+		const meetingName = String(data?.Meeting?.Name ?? "").trim();
+		if (meetingName) {
+			this.liveMeetingName = meetingName;
+		}
+
+		const meetingCountry = String(data?.Meeting?.Country?.Name ?? data?.Meeting?.Country?.Code ?? "").trim();
+		if (meetingCountry) {
+			this.liveMeetingCountry = meetingCountry;
+		}
+
+		const startDateRaw = String(data?.StartDate ?? data?.GmtStart ?? "").trim();
+		if (startDateRaw) {
+			const parsed = new Date(startDateRaw);
+			if (!isNaN(parsed.getTime())) {
+				this.liveSessionStartUTC = parsed.toISOString();
+				await this.updateTimeElapsedState(parsed.getTime());
+			}
+		}
+
+		if (this.liveFallbackActive) {
+			void this.applyLiveFallbackScheduleStates(new Date());
+			void this.updateProvisionalResultsFromLiveData(new Date());
+			void this.updateTimeElapsedState(new Date().getTime());
+		}
+
 		// Capture session path and load the static DriverList which has full metadata
 		// (names, teams, colours) that may be absent from SignalR incremental updates.
 		const path = String(data?.Path ?? "").trim();
@@ -888,6 +1209,15 @@ class F1 extends utils.Adapter {
 				await this.publishDrivers();
 			}
 		} catch (e) {
+			if (axios.isAxiosError(e)) {
+				const status = e.response?.status;
+				if (status === 401 || status === 403) {
+					this.log.debug(
+						"Static DriverList access denied (401/403), continuing with SignalR DriverList data",
+					);
+					return;
+				}
+			}
 			this.log.debug(
 				`Static DriverList fetch failed (non-critical): ${e instanceof Error ? e.message : String(e)}`,
 			);
@@ -939,6 +1269,7 @@ class F1 extends utils.Adapter {
 			this.clockRefUtcMs = new Date(utcStr).getTime();
 			this.clockRefRemainingMs = this.parseRemainingToMs(remainingStr);
 			this.clockExtrapolating = extrapolating;
+			await this.updateTimeElapsedState(this.clockRefUtcMs);
 		}
 
 		if (extrapolating) {
@@ -967,12 +1298,14 @@ class F1 extends utils.Adapter {
 			this.stopClockExtrapolation();
 			return;
 		}
-		const elapsedMs = Date.now() - this.clockRefUtcMs;
+		const nowMs = Date.now();
+		const elapsedMs = nowMs - this.clockRefUtcMs;
 		const remainingMs = Math.max(0, this.clockRefRemainingMs - elapsedMs);
 		await this.setStateAsync("live.time_remaining", {
 			val: this.formatRemainingMs(remainingMs),
 			ack: true,
 		});
+		await this.updateTimeElapsedState(nowMs);
 		if (remainingMs === 0) {
 			this.stopClockExtrapolation();
 		}
@@ -984,6 +1317,27 @@ class F1 extends utils.Adapter {
 			return (parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2])) * 1000;
 		}
 		return 0;
+	}
+
+	private getSessionStartMs(): number | null {
+		const start = this.liveSessionStartUTC || this.currentLiveSession?.startUTC;
+		if (!start) {
+			return null;
+		}
+		const ms = new Date(start).getTime();
+		return isNaN(ms) ? null : ms;
+	}
+
+	private async updateTimeElapsedState(nowMs = Date.now()): Promise<void> {
+		const startMs = this.getSessionStartMs();
+		if (startMs === null) {
+			return;
+		}
+		const elapsedMs = Math.max(0, nowMs - startMs);
+		await this.setStateAsync("live.time_elapsed", {
+			val: this.formatRemainingMs(elapsedMs),
+			ack: true,
+		});
 	}
 
 	private formatRemainingMs(ms: number): string {
