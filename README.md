@@ -4,14 +4,14 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.f1.svg)](https://www.npmjs.com/package/iobroker.f1)
 [![License](https://img.shields.io/github/license/bloop16/ioBroker.f1.svg)](https://github.com/bloop16/ioBroker.f1/blob/main/LICENSE)
 
-Formula 1 live data integration for ioBroker — race calendar, standings, session results and real-time live data via the official F1 Live Timing feed.
+Formula 1 live data integration for ioBroker — provides race calendar, championship standings, session results, and real-time live session data via the [official F1 Live Timing feed](https://www.formula1.com/) and [Jolpica API](https://api.jolpi.ca/).
 
 ## Features
 
 - **Race Calendar** — Next race & session info with countdown (days/hours)
 - **Full Season Calendar** — All rounds of the current season as JSON
 - **Championship Standings** — Driver and constructor standings with points and wins
-- **Session Results** — Race, qualifying, sprint, and all three practice sessions
+- **Session Results** — Race, qualifying, sprint, and practice session results
 - **Live Session Data** — Real-time data via F1 Live Timing SignalR WebSocket
   - Track status (AllClear / Yellow / SafetyCar / VSC / RedFlag)
   - Session status and name
@@ -27,37 +27,15 @@ Formula 1 live data integration for ioBroker — race calendar, standings, sessi
 
 ## Data Points
 
-```
-f1.0
-├── info.connection
-├── schedule/
-│   ├── next_race_name / round / circuit / country / date / countdown_days
-│   ├── next_session_name / type / date / countdown_hours
-│   ├── weekend_json          (all sessions of current weekend as JSON)
-│   └── calendar              (full season calendar as JSON)
-├── standings/
-│   ├── drivers               (JSON array)
-│   ├── teams                 (JSON array)
-│   └── last_update
-├── results/
-│   ├── race / qualifying / sprint   (JSON arrays)
-│   └── last_update
-└── live/                     (only active during session ±30 min)
-    ├── is_live / session_name / session_status / track_status
-    ├── laps_current / laps_total
-    ├── time_remaining / time_elapsed
-    ├── weather / race_control / top_three
-    ├── drivers / tyres / pit_stops / team_radio
-    └── last_update
-```
+See the **Usage** section above for the complete object hierarchy and update intervals.
 
 ## Data Sources
 
 | Channel | Source | Update |
 |---|---|---|
-| `schedule/` | Jolpica API (ergast.com fallback) | Hourly |
-| `standings/` | Jolpica API (ergast.com fallback) | Hourly / after race |
-| `results/` | Jolpica API (ergast.com fallback) | Hourly / after each session |
+| `schedule/` | Jolpica API (Ergast fallback) | Hourly |
+| `standings/` | Jolpica API (Ergast fallback) | Hourly + after race |
+| `results/` | Jolpica API (Ergast fallback) | Hourly + after session |
 | `live/` | F1 Live Timing SignalR WebSocket | Real-time push |
 
 ## Requirements
@@ -65,8 +43,83 @@ f1.0
 - ioBroker >= 5.0.19
 - Node.js >= 20
 - Internet connection
+- Stable connection to [Jolpica API](https://api.jolpi.ca/) or fallback [Ergast API](https://ergast.com/mwapi/)
 
-## Changelog
+## Installation & Configuration
+
+1. Install the adapter via the ioBroker Admin panel or command line
+2. Open the adapter settings (no user configuration required by default)
+3. The adapter automatically:
+   - Fetches the current F1 season calendar hourly
+   - Updates championship standings after each session
+   - Provides real-time live session data when sessions are active
+4. Optional: adjust update intervals in adapter settings if needed
+
+### Data Sources & Consistency
+
+The adapter uses multiple data sources with automatic fallback:
+
+| Channel | Primary | Fallback | Behavior |
+|---------|---------|----------|----------|
+| Schedule & Standings | [Jolpica API](https://api.jolpi.ca/) | [Ergast API](https://ergast.com/mwapi/) | Updated hourly + after races |
+| Results | Jolpica API | Ergast API | Updated after each session |
+| Live Data | [F1 Live Timing SignalR](https://www.formula1.com/) | OpenF1 API | Real-time push during sessions |
+
+**Note:** During race weekends, upstream APIs may temporarily deliver mixed-round data (e.g., standings updated before results). The adapter includes retry logic (6 attempts, 10-minute intervals) to ensure data consistency.
+
+## Usage
+
+Once installed and started, the adapter exposes ioBroker states under the object path `f1.0`:
+
+```
+f1.0
+├── info.connection           (adapter connection status)
+├── schedule/
+│   ├── next_race_name / round / circuit / country / date
+│   ├── next_session_name / type / date / countdown_*
+│   ├── weekend_json          (all sessions of current weekend)
+│   └── calendar              (full season as JSON)
+├── standings/
+│   ├── drivers               (JSON array with positions & points)
+│   ├── teams                 (JSON array with constructor standings)
+│   └── last_update
+├── results/
+│   ├── race / qualifying / sprint   (JSON arrays)
+│   └── last_update
+└── live/                     (only during session ±30 min)
+    ├── is_live / session_status / track_status
+    ├── laps_current / laps_total / time_remaining / time_elapsed
+    ├── weather / race_control / top_three
+    ├── drivers / tyres / pit_stops / team_radio
+    └── last_update
+```
+
+States are updated:
+- **Hourly** for schedule, standings, and results
+- **Per-session** for result details (race, qualifying, sprint)
+- **Real-time** for live session data (during active sessions)
+
+## Troubleshooting
+
+### "Points mismatch" during race-end window
+
+During the first 60 minutes after a race ends, standings and results may briefly show different round numbers. This is expected behavior — the upstream API refreshes asynchronously. The adapter automatically polls for consistency (6 attempts, 10-minute intervals).
+
+### No live data appearing
+
+1. Check that a session is currently active (F1 Live Timing typically streams during practice, qualifying, and race)
+2. Verify internet connection
+3. Check adapter logs (ioBroker Admin → Instances → F1 → Logs)
+4. If Jolpica API is unavailable, the adapter falls back to [Ergast API](https://ergast.com/mwapi/)
+
+### Stale data
+
+Data is cached and updated on a schedule. If data appears outdated:
+1. Manual trigger: restart the adapter instance
+2. Automatic: next hourly refresh cycle will fetch fresh data
+3. After a session: automatic refresh is triggered within 2 minutes of session end
+
+
 
 ### 0.1.7 (2026-05-03)
 
@@ -147,10 +200,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Data Sources & Attribution
+
+This adapter relies on the following data sources:
+
+- **[Jolpica API](https://api.jolpi.ca/)** — Ergast API mirror, primary source for F1 race calendar, standings, and results
+- **[Ergast API](https://ergast.com/mwapi/)** — Historical F1 data, used as fallback when Jolpica is unavailable
+- **[F1 Live Timing](https://www.formula1.com/)** — Official real-time session data via SignalR WebSocket
+- **[OpenF1 API](https://openf1.org/)** — Fallback for live session detection
+
 ## Disclaimer
 
 This project is **not affiliated** with, endorsed by, or in any way officially connected with Formula 1, the FIA, or any of their subsidiaries or affiliates.
 
 **F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
 
-This adapter is intended for personal, non-commercial use only. Data is sourced from [Jolpica](https://api.jolpi.ca/) (Ergast mirror) and the official F1 Live Timing feed.
+This adapter is intended for personal, non-commercial use only.
