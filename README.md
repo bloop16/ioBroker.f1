@@ -41,7 +41,7 @@ See the **Usage** section below for the complete object hierarchy and update int
 ## Requirements
 
 - ioBroker >= 5.0.19
-- Node.js >= 22
+- Node.js >= 20
 - Internet connection
 - Stable connection to [Jolpica API](https://api.jolpi.ca/) or fallback [Ergast API](https://ergast.com/mwapi/)
 
