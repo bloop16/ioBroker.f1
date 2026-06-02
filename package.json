@@ -1,6 +1,6 @@
 {
 	"name": "iobroker.f1",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Formula 1 live data integration for ioBroker - race information, standings, and live session tracking",
 	"author": {
 		"name": "Martin Rauscher(bloop16)",
@@ -24,7 +24,7 @@
 		"url": "https://github.com/bloop16/ioBroker.f1.git"
 	},
 	"engines": {
-		"node": ">= 20"
+		"node": ">= 22"
 	},
 	"dependencies": {
 		"@iobroker/adapter-core": "^3.3.2",
@@ -32,10 +32,10 @@
 		"ws": "^8.20.0"
 	},
 	"devDependencies": {
-		"@alcalzone/release-script": "^5.1.1",
-		"@alcalzone/release-script-plugin-iobroker": "^5.1.2",
-		"@alcalzone/release-script-plugin-license": "^5.1.1",
-		"@alcalzone/release-script-plugin-manual-review": "^5.1.1",
+		"@alcalzone/release-script": "^5.2.0",
+		"@alcalzone/release-script-plugin-iobroker": "^5.2.0",
+		"@alcalzone/release-script-plugin-license": "^5.2.0",
+		"@alcalzone/release-script-plugin-manual-review": "^5.2.0",
 		"@iobroker/adapter-dev": "^1.5.0",
 		"@iobroker/dev-server": "^0.8.0",
 		"@iobroker/eslint-config": "^2.2.0",

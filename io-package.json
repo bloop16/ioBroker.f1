@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.7",
+		"version": "0.1.8",
 		"news": {
+			"0.1.8": {
+				"en": "Maintenance release: bumped to 0.1.8 and aligned ioBroker repository requirements (Node.js >=22, release-script >=5.2.0, CI matrix with Node 20, README and metadata cleanup).",
+				"de": "Wartungsrelease: auf 0.1.8 erhöht und ioBroker-Repository-Anforderungen abgeglichen (Node.js >=22, release-script >=5.2.0, CI-Matrix mit Node 20, README- und Metadaten-Bereinigung).",
+				"ru": "Технический релиз: обновление до 0.1.8 и приведение к требованиям ioBroker repository (Node.js >=22, release-script >=5.2.0, CI-матрица с Node 20, правки README и метаданных).",
+				"pt": "Lançamento de manutenção: versão atualizada para 0.1.8 e alinhamento aos requisitos do repositório ioBroker (Node.js >=22, release-script >=5.2.0, matriz CI com Node 20, limpeza de README e metadados).",
+				"nl": "Onderhoudsrelease: verhoogd naar 0.1.8 en afgestemd op ioBroker repository-eisen (Node.js >=22, release-script >=5.2.0, CI-matrix met Node 20, README- en metadata-opruiming).",
+				"fr": "Version de maintenance : passage en 0.1.8 et alignement sur les exigences du dépôt ioBroker (Node.js >=22, release-script >=5.2.0, matrice CI avec Node 20, nettoyage README et métadonnées).",
+				"it": "Release di manutenzione: aggiornamento a 0.1.8 e allineamento ai requisiti del repository ioBroker (Node.js >=22, release-script >=5.2.0, matrice CI con Node 20, pulizia README e metadati).",
+				"es": "Versión de mantenimiento: subida a 0.1.8 y alineación con los requisitos del repositorio ioBroker (Node.js >=22, release-script >=5.2.0, matriz CI con Node 20, limpieza de README y metadatos).",
+				"pl": "Wydanie utrzymaniowe: podniesiono do 0.1.8 i dostosowano do wymagań repozytorium ioBroker (Node.js >=22, release-script >=5.2.0, macierz CI z Node 20, porządki w README i metadanych).",
+				"uk": "Технічний реліз: оновлення до 0.1.8 та узгодження з вимогами репозиторію ioBroker (Node.js >=22, release-script >=5.2.0, CI-матриця з Node 20, очищення README і метаданих).",
+				"zh-cn": "维护版本：升级到 0.1.8，并对齐 ioBroker 仓库要求（Node.js >=22、release-script >=5.2.0、包含 Node 20 的 CI 矩阵、README 与元数据清理）。"
+			},
 			"0.1.7": {
 				"en": "Add robust post-race refresh retry logic — 6 attempts every 10 minutes to ensure Jolpica round data stabilizes. Verified via cross-API analysis that points discrepancies stem from upstream mixed-round data delivery, not adapter mapping.",
 				"de": "Robuste Post-Race-Refresh-Retry-Logik hinzugefügt — 6 Versuche alle 10 Minuten, um sicherzustellen, dass Jolpica-Rundendaten stabil sind. Durch API-Analyse bestätigt: Punktemissstände kommen von Jolpica-Mix-Datenlieferung, nicht vom Adapter.",
@@ -28,19 +41,6 @@
 				"pl": "Usunięto stany fp1/fp2/fp3 i sprint_qualifying — API Jolpica/Ergast nie udostępnia wyników treningów ani sprint qualifying",
 				"uk": "Видалено стани fp1/fp2/fp3 і sprint_qualifying — API Jolpica/Ergast не надає результати тренувань та спринт-кваліфікації",
 				"zh-cn": "移除 fp1/fp2/fp3 和 sprint_qualifying 状态——Jolpica/Ergast API 不提供练习赛或冲刺排位赛成绩"
-			},
-			"0.1.5": {
-				"en": "Fix SignalR live timing: added /start replay, per-session result loading based on schedule dates, double-Z date parsing bug, stale results from previous weekends cleared correctly",
-				"de": "SignalR Live-Timing: /start-Replay ergänzt, sessionbasiertes Ergebnisladen nach Zeitplan, Datumsformat-Bug behoben, veraltete Ergebnisse aus vorherigen Wochenenden werden korrekt geleert",
-				"ru": "Исправление SignalR: добавлен /start-реплей, загрузка результатов по сессиям на основе расписания, исправлена ошибка формата даты, устаревшие данные прошлых уик-эндов очищаются корректно",
-				"pt": "Correcção SignalR: replay /start adicionado, carregamento de resultados por sessão com base no calendário, corrigido bug de formato de data, dados desatualizados de fins de semana anteriores limpos corretamente",
-				"nl": "SignalR reparatie: /start-replay toegevoegd, sessiegebaseerd laden van resultaten op basis van schema, datumformaatfout opgelost, verouderde resultaten van vorige weekenden correct gewist",
-				"fr": "Correction SignalR : replay /start ajouté, chargement des résultats par session selon le calendrier, bug de format de date corrigé, données obsolètes des week-ends précédents effacées correctement",
-				"it": "Fix SignalR: replay /start aggiunto, caricamento risultati per sessione in base al calendario, bug formato data corretto, dati obsoleti da weekend precedenti eliminati correttamente",
-				"es": "Corrección SignalR: replay /start añadido, carga de resultados por sesión según el calendario, bug de formato de fecha corregido, datos obsoletos de fines de semana anteriores eliminados correctamente",
-				"pl": "Naprawa SignalR: dodano replay /start, ładowanie wyników sesji na podstawie harmonogramu, naprawiono błąd formatu daty, nieaktualne wyniki z poprzednich weekendów są poprawnie czyszczone",
-				"uk": "Виправлення SignalR: додано /start-реплей, завантаження результатів по сесіях на основі розкладу, виправлено помилку формату дати, застарілі результати минулих вихідних очищаються коректно",
-				"zh-cn": "修复 SignalR：新增 /start 重播、按赛程日期逐场次加载成绩、修复日期格式双 Z 错误、正确清除上一周末的过期数据"
 			},
 			"0.1.4": {
 				"en": "Removed VIS1 widgets (development discontinued)",

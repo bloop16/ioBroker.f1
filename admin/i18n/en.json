@@ -7,5 +7,6 @@
 	"Update interval (normal)": "Update interval (normal)",
 	"Update interval in seconds when no race session is active (default: 1 hour = 3600s)": "Update interval in seconds when no race session is active (default: 1 hour = 3600s)",
 	"Update interval (race day)": "Update interval (race day)",
+	"Update interval in seconds during active race sessions (default: 10s).": "Update interval in seconds during active race sessions (default: 10s).",
 	"Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!": "Update interval in seconds during active race sessions (default: 10s). OpenF1 rate limit: 3 req/s, 30 req/min - 10s is safe!"
 }

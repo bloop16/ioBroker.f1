@@ -5,6 +5,12 @@
     This file is supported by @alcalzone/releasescript.
 -->
 
+### 0.1.7 (2026-05-03)
+
+- (bloop) Added robust post-race refresh retry logic (6 attempts every 10 minutes)
+- (bloop) Added API round consistency monitoring for standings/results sync
+- (bloop) Improved post-session refresh flow with detailed retry logging
+
 ### 0.1.4 (2026-04-15)
 
 - (bloop) Removed VIS1 widgets (development discontinued)

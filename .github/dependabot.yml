@@ -1,28 +1,30 @@
 version: 2
 updates:
-    - package-ecosystem: "npm"
-      directories: ["**/*"]
-      schedule:
-          interval: "daily"
-          time: "04:17"
-          timezone: "UTC"
-      open-pull-requests-limit: 10
-      cooldown:
-          default-days: 7
-      ignore:
-          # Ignore major version updates to avoid breaking changes
-          - dependency-name: "*"
-            update-types: ["version-update:semver-major"]
-      labels:
-          - "dependencies"
-          - "automerge"
-    - package-ecosystem: "github-actions"
-      directory: "/"
-      schedule:
-          interval: "daily"
-          time: "03:00"
-          timezone: "UTC"
-      open-pull-requests-limit: 15
-      labels:
-          - "dependencies"
-          - "automerge"
+  - package-ecosystem: "npm"
+    directories: ["**/*"]
+    schedule:
+      interval: "daily"
+      time: "04:17"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    ignore:
+      # Ignore major version updates to avoid breaking changes
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "automerge"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 15
+    labels:
+      - "dependencies"
+      - "automerge"

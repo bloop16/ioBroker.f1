@@ -41,7 +41,7 @@ See the **Usage** section below for the complete object hierarchy and update int
 ## Requirements
 
 - ioBroker >= 5.0.19
-- Node.js >= 20
+- Node.js >= 22
 - Internet connection
 - Stable connection to [Jolpica API](https://api.jolpi.ca/) or fallback [Ergast API](https://ergast.com/mwapi/)
 
@@ -123,6 +123,13 @@ Data is cached and updated on a schedule. If data appears outdated:
 
 ## Changelog
 
+### 0.1.8 (2026-06-02)
+
+- (bloop) Maintenance: bumped adapter version to `0.1.8`
+- (bloop) Maintenance: aligned ioBroker repository requirements (`Node.js >= 22`, release-script plugins `>= 5.2.0`)
+- (bloop) CI: updated adapter test matrix to include Node.js 20.x
+- (bloop) Docs/Meta: updated README and package metadata for checker compliance
+
 ### 0.1.7 (2026-05-03)
 
 - (bloop) Add: post-race refresh retry logic — 6 attempts every 10 minutes to ensure Jolpica round data stabilizes after session end
@@ -148,6 +155,23 @@ Data is cached and updated on a schedule. If data appears outdated:
 
 For older changelog entries, see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
+## Data Sources & Attribution
+
+This adapter relies on the following data sources:
+
+- **[Jolpica API](https://api.jolpi.ca/)** — Ergast API mirror, primary source for F1 race calendar, standings, and results
+- **[Ergast API](https://ergast.com/mwapi/)** — Historical F1 data, used as fallback when Jolpica is unavailable
+- **[F1 Live Timing](https://www.formula1.com/)** — Official real-time session data via SignalR WebSocket
+- **[OpenF1 API](https://openf1.org/)** — Fallback for live session detection
+
+## Disclaimer
+
+This project is **not affiliated** with, endorsed by, or in any way officially connected with Formula 1, the FIA, or any of their subsidiaries or affiliates.
+
+**F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
+
+This adapter is intended for personal, non-commercial use only.
+
 ## License
 
 MIT License
@@ -171,20 +195,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-## Data Sources & Attribution
-
-This adapter relies on the following data sources:
-
-- **[Jolpica API](https://api.jolpi.ca/)** — Ergast API mirror, primary source for F1 race calendar, standings, and results
-- **[Ergast API](https://ergast.com/mwapi/)** — Historical F1 data, used as fallback when Jolpica is unavailable
-- **[F1 Live Timing](https://www.formula1.com/)** — Official real-time session data via SignalR WebSocket
-- **[OpenF1 API](https://openf1.org/)** — Fallback for live session detection
-
-## Disclaimer
-
-This project is **not affiliated** with, endorsed by, or in any way officially connected with Formula 1, the FIA, or any of their subsidiaries or affiliates.
-
-**F1®**, **FORMULA ONE®**, **FORMULA 1®**, **FIA FORMULA ONE WORLD CHAMPIONSHIP®**, **GRAND PRIX®** and related marks are trademarks of Formula One Licensing B.V.
-
-This adapter is intended for personal, non-commercial use only.
