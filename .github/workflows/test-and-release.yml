@@ -51,6 +51,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           os: ${{ matrix.os }}
           install-command: 'npm ci --engine-strict=false'
+          build: true
 
   # TODO: To enable automatic npm releases, create a token on npmjs.org
   # Enter this token as a GitHub secret (with name NPM_TOKEN) in the repository options
