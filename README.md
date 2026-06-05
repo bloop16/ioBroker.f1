@@ -123,18 +123,17 @@ Data is cached and updated on a schedule. If data appears outdated:
 
 ## Changelog
 
+### 0.1.10 (2026-06-05)
+
+- (bloop) Fixed live sessions by migrating from legacy SignalR to SignalR Core transport
+- (bloop) Reduced repeated 401 reconnect warnings from F1 Live Timing legacy endpoint
+- (bloop) Improved live connection stability with handshake-aware subscription flow
+
 ### 0.1.9 (2026-06-02)
 
 - (bloop) Maintenance: bumped adapter version to `0.1.9`
 - (bloop) Maintenance: updated dependencies and aligned TypeScript with Node 22 baseline
 - (bloop) Admin: completed missing translations for configuration texts
-
-### 0.1.8 (2026-06-02)
-
-- (bloop) Maintenance: bumped adapter version to `0.1.8`
-- (bloop) Maintenance: aligned ioBroker repository requirements (`Node.js >= 22`, release-script plugins `>= 5.2.0`)
-- (bloop) CI: updated adapter test matrix to include Node.js 20.x
-- (bloop) Docs/Meta: updated README and package metadata for checker compliance
 
 For older changelog entries, see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 

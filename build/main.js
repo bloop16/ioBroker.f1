@@ -56,6 +56,9 @@ const SUBSCRIBE_STREAMS = [
     "PitStopSeries",
     "TyreStintSeries",
 ];
+const SIGNALR_CORE_RECORD_SEP = "\x1e";
+const SIGNALR_CORE_NEGOTIATE_URL = "/signalrcore/negotiate";
+const SIGNALR_CORE_WS_URL = "wss://livetiming.formula1.com/signalrcore";
 const SESSION_DURATIONS = {
     "Practice 1": 60,
     "Practice 2": 60,
@@ -92,6 +95,8 @@ class F1 extends utils.Adapter {
     lastSavedSession = "";
     ws = null;
     wsConnecting = false;
+    coreHandshakeAck = false;
+    coreSubscribeSent = false;
     // Schedule cache — updated by refreshJolpicaData, reused by checkLiveStatus
     cachedRaces = [];
     cachedSessions = [];
@@ -750,54 +755,54 @@ class F1 extends utils.Adapter {
             return;
         }
         this.wsConnecting = true;
+        this.coreHandshakeAck = false;
+        this.coreSubscribeSent = false;
         // Clear all per-session caches before each new connection so that the
         // R-replay after /start always starts with a clean slate — prevents
         // duplicate race-control messages, team-radio captures, and pit stops
         // from being re-appended on reconnect.
         this.disconnectSignalR(false);
         try {
-            // 1. Negotiate to get connection token + cookies
-            const negRes = await this.ltApi.get("/signalr/negotiate", {
-                params: {
-                    clientProtocol: "1.5",
-                    connectionData: '[{"name":"Streaming"}]',
-                },
+            // SignalR Core flow for live sessions:
+            // OPTIONS (to obtain AWSALBCORS) -> POST negotiate -> WS connect -> protocol handshake -> Subscribe.
+            const optRes = await this.ltApi.options(SIGNALR_CORE_NEGOTIATE_URL, {
+                params: { negotiateVersion: "1" },
+                validateStatus: () => true,
             });
-            const rawToken = negRes.data.ConnectionToken;
-            const token = encodeURIComponent(rawToken);
-            const cookies = (negRes.headers["set-cookie"] ?? []).join("; ");
-            // 2. Build WebSocket URL
-            const wsUrl = `wss://livetiming.formula1.com/signalr/connect` +
-                `?clientProtocol=1.5&transport=webSockets` +
-                `&connectionData=${encodeURIComponent('[{"name":"Streaming"}]')}` +
-                `&connectionToken=${token}`;
-            // 3. Connect
-            this.ws = new ws_1.default(wsUrl, { headers: { Cookie: cookies } });
+            if (optRes.status >= 400) {
+                this.log.debug(`SignalR Core OPTIONS returned ${optRes.status}; continuing with best effort`);
+            }
+            const setCookieHeader = optRes.headers["set-cookie"];
+            const setCookie = Array.isArray(setCookieHeader)
+                ? setCookieHeader
+                : typeof setCookieHeader === "string"
+                    ? [setCookieHeader]
+                    : [];
+            const awsAlbCors = setCookie.map(v => /AWSALBCORS=([^;]+)/.exec(v)?.[1]).find(Boolean) ?? "";
+            const negotiateHeaders = {};
+            if (awsAlbCors) {
+                negotiateHeaders.Cookie = `AWSALBCORS=${awsAlbCors}`;
+            }
+            const negRes = await this.ltApi.post(SIGNALR_CORE_NEGOTIATE_URL, null, {
+                params: { negotiateVersion: "1" },
+                headers: negotiateHeaders,
+            });
+            const rawToken = String(negRes.data?.connectionToken ?? "").trim();
+            if (!rawToken) {
+                throw new Error("SignalR Core negotiate returned no connectionToken");
+            }
+            const wsHeaders = {};
+            if (awsAlbCors) {
+                wsHeaders.Cookie = `AWSALBCORS=${awsAlbCors}`;
+            }
+            this.ws = new ws_1.default(`${SIGNALR_CORE_WS_URL}?id=${encodeURIComponent(rawToken)}`, {
+                headers: wsHeaders,
+            });
             this.ws.on("open", () => {
-                this.log.info("F1 Live Timing: WebSocket connected — sending Subscribe + /start");
-                // Subscribe to all streams
-                const subscribeMsg = JSON.stringify({
-                    H: "Streaming",
-                    M: "Subscribe",
-                    A: [SUBSCRIBE_STREAMS],
-                    I: 1,
-                });
-                this.ws.send(subscribeMsg);
-                // Call /start to trigger initial state replay of all subscribed streams.
-                // Without this the server only sends incremental updates going forward,
-                // so DriverList, TrackStatus, TopThree etc. remain empty after a connect.
-                this.ltApi
-                    .get("/signalr/start", {
-                    params: {
-                        clientProtocol: "1.5",
-                        transport: "webSockets",
-                        connectionData: '[{"name":"Streaming"}]',
-                        connectionToken: rawToken,
-                    },
-                    headers: { Cookie: cookies },
-                })
-                    .then(() => this.log.debug("SignalR /start acknowledged"))
-                    .catch((e) => this.log.debug(`SignalR /start failed (non-critical): ${e.message}`));
+                this.wsConnecting = false;
+                this.log.info("F1 Live Timing: SignalR Core connected — sending handshake + Subscribe");
+                // SignalR Core JSON protocol handshake (required before invocations)
+                this.ws.send(`${JSON.stringify({ protocol: "json", version: 1 })}${SIGNALR_CORE_RECORD_SEP}`);
             });
             this.ws.on("message", (raw) => {
                 let str;
@@ -813,7 +818,8 @@ class F1 extends utils.Adapter {
                 void this.handleWsMessage(str);
             });
             this.ws.on("close", () => {
-                this.log.info("F1 Live Timing: WebSocket disconnected");
+                this.wsConnecting = false;
+                this.log.info("F1 Live Timing: SignalR Core disconnected");
                 this.ws = null;
                 // Reconnect after 5s if still in live window
                 if (this.currentLiveSession) {
@@ -821,19 +827,30 @@ class F1 extends utils.Adapter {
                 }
             });
             this.ws.on("error", (err) => {
-                this.log.warn(`F1 Live Timing WebSocket error: ${err.message}`);
+                this.wsConnecting = false;
+                this.log.warn(`F1 Live Timing SignalR Core error: ${err.message}`);
             });
         }
         catch (error) {
+            this.wsConnecting = false;
             const msg = error instanceof Error ? error.message : String(error);
-            this.log.warn(`F1 Live Timing connect failed: ${msg}`);
+            this.log.warn(`F1 Live Timing connect failed (SignalR Core): ${msg}`);
             if (this.currentLiveSession) {
                 this.reconnectTimeout = this.setTimeout(() => void this.connectSignalR(), 15000);
             }
         }
-        finally {
-            this.wsConnecting = false;
+    }
+    sendCoreSubscribeOnce() {
+        if (this.coreSubscribeSent || !this.ws || this.ws.readyState !== ws_1.default.OPEN) {
+            return;
         }
+        this.ws.send(`${JSON.stringify({
+            type: 1,
+            target: "Subscribe",
+            arguments: [SUBSCRIBE_STREAMS],
+            invocationId: "1",
+        })}${SIGNALR_CORE_RECORD_SEP}`);
+        this.coreSubscribeSent = true;
     }
     /**
      * Disconnect the WebSocket and cancel any pending reconnect.
@@ -870,28 +887,63 @@ class F1 extends utils.Adapter {
     }
     // ── SignalR Message Processing ─────────────────────────────────────────────
     async handleWsMessage(raw) {
-        let payload;
-        try {
-            payload = JSON.parse(raw);
-        }
-        catch {
-            return;
-        }
-        // Initial state replay sent by the server after /start:
-        // {"R": {"DriverList": {...}, "TimingData": {...}, ...}, "I": "1"}
-        // This is completely separate from M-array incremental updates.
-        if (payload?.R && typeof payload.R === "object") {
-            for (const [stream, data] of Object.entries(payload.R)) {
-                await this.handleStreamData(stream, data);
-            }
-        }
-        // Incremental updates: {"M": [{"H": "Streaming", "M": "feed", "A": [stream, data, ts]}]}
-        for (const msg of payload?.M ?? []) {
-            if (msg.M !== "feed" || !Array.isArray(msg.A) || msg.A.length < 2) {
+        const chunks = raw.includes(SIGNALR_CORE_RECORD_SEP) ? raw.split(SIGNALR_CORE_RECORD_SEP) : [raw];
+        for (const chunk of chunks) {
+            const message = chunk.trim();
+            if (!message) {
                 continue;
             }
-            const [stream, data] = msg.A;
-            await this.handleStreamData(stream, data);
+            let payload;
+            try {
+                payload = JSON.parse(message);
+            }
+            catch {
+                continue;
+            }
+            // SignalR Core handshake acknowledgement is an empty JSON object.
+            if (!this.coreHandshakeAck &&
+                payload &&
+                typeof payload === "object" &&
+                !Array.isArray(payload) &&
+                Object.keys(payload).length === 0) {
+                this.coreHandshakeAck = true;
+                this.sendCoreSubscribeOnce();
+                continue;
+            }
+            // SignalR Core ping -> respond to keep the connection alive.
+            if (payload?.type === 6) {
+                if (this.ws && this.ws.readyState === ws_1.default.OPEN) {
+                    this.ws.send(`${JSON.stringify({ type: 6 })}${SIGNALR_CORE_RECORD_SEP}`);
+                }
+                continue;
+            }
+            if (payload?.type === 7) {
+                this.log.debug(`SignalR Core server closed stream: ${String(payload?.error ?? "no error")}`);
+                continue;
+            }
+            // SignalR Core feed invocation: {"type":1,"target":"feed","arguments":[stream,data,...]}
+            if (payload?.type === 1 && payload?.target === "feed" && Array.isArray(payload?.arguments)) {
+                const [stream, data] = payload.arguments;
+                if (typeof stream === "string") {
+                    await this.handleStreamData(stream, data);
+                }
+                continue;
+            }
+            // Legacy/RPC-like replay shape (or translated core completion):
+            if (payload?.R && typeof payload.R === "object") {
+                for (const [stream, data] of Object.entries(payload.R)) {
+                    await this.handleStreamData(stream, data);
+                }
+                continue;
+            }
+            // Legacy incremental updates: {"M":[{"M":"feed","A":[stream,data,...]}]}
+            for (const msg of payload?.M ?? []) {
+                if (msg.M !== "feed" || !Array.isArray(msg.A) || msg.A.length < 2) {
+                    continue;
+                }
+                const [stream, data] = msg.A;
+                await this.handleStreamData(stream, data);
+            }
         }
     }
     async handleStreamData(stream, data) {

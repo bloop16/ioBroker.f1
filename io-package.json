@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.9",
+		"version": "0.1.10",
 		"news": {
+			"0.1.10": {
+				"en": "Live timing fix: migrated live sessions from legacy SignalR endpoint to SignalR Core, reducing 401 reconnect warnings and improving live feed stability.",
+				"de": "Live-Timing-Fix: Live-Sessions vom alten SignalR-Endpunkt auf SignalR Core migriert, dadurch weniger 401-Reconnect-Warnungen und stabilerer Live-Feed.",
+				"ru": "Исправление live timing: live-сессии переведены с устаревшего SignalR endpoint на SignalR Core, что уменьшает предупреждения о 401 при переподключении и повышает стабильность live-потока.",
+				"pt": "Correção de live timing: sessões ao vivo migradas do endpoint SignalR legado para SignalR Core, reduzindo avisos 401 de reconexão e melhorando a estabilidade do feed ao vivo.",
+				"nl": "Live-timingfix: live-sessies gemigreerd van het legacy SignalR-endpoint naar SignalR Core, met minder 401-herverbindingswaarschuwingen en stabielere live-feed.",
+				"fr": "Correctif live timing : migration des sessions live de l'ancien endpoint SignalR vers SignalR Core, réduisant les avertissements 401 de reconnexion et améliorant la stabilité du flux live.",
+				"it": "Correzione live timing: sessioni live migrate dal vecchio endpoint SignalR a SignalR Core, con riduzione degli avvisi 401 di riconnessione e maggiore stabilità del feed live.",
+				"es": "Corrección de live timing: sesiones en vivo migradas del endpoint SignalR heredado a SignalR Core, reduciendo avisos 401 de reconexión y mejorando la estabilidad del feed en vivo.",
+				"pl": "Poprawka live timing: sesje live przeniesiono ze starszego endpointu SignalR na SignalR Core, co zmniejsza ostrzeżenia 401 przy ponownym łączeniu i poprawia stabilność strumienia live.",
+				"uk": "Виправлення live timing: live-сесії переведено зі застарілого endpoint SignalR на SignalR Core, що зменшує попередження 401 під час перепідключення та покращує стабільність live-потоку.",
+				"zh-cn": "实时计时修复：已将实时会话从旧版 SignalR 端点迁移到 SignalR Core，减少 401 重连警告并提升实时数据流稳定性。"
+			},
 			"0.1.9": {
 				"en": "Maintenance update: dependency updates, TypeScript/node22 baseline alignment, and completed missing Admin translations.",
 				"de": "Wartungsupdate: Abhängigkeiten aktualisiert, TypeScript/node22-Basis angeglichen und fehlende Admin-Übersetzungen ergänzt.",

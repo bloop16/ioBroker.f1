@@ -4,6 +4,12 @@
     Older changelog entries are stored here.
     This file is supported by @alcalzone/releasescript.
 -->
+### 0.1.8 (2026-06-02)
+
+- (bloop) Maintenance: bumped adapter version to `0.1.8`
+- (bloop) Maintenance: aligned ioBroker repository requirements (`Node.js >= 22`, release-script plugins `>= 5.2.0`)
+- (bloop) CI: updated adapter test matrix to include Node.js 20.x
+- (bloop) Docs/Meta: updated README and package metadata for checker compliance
 
 ### 0.1.7 (2026-05-03)
 
