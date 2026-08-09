@@ -67,58 +67,6 @@
         "pl": "Wydanie utrzymaniowe: podniesiono do 0.1.8 i dostosowano do wymagań repozytorium ioBroker (Node.js >=22, release-script >=5.2.0, macierz CI z Node 20, porządki w README i metadanych).",
         "uk": "Технічний реліз: оновлення до 0.1.8 та узгодження з вимогами репозиторію ioBroker (Node.js >=22, release-script >=5.2.0, CI-матриця з Node 20, очищення README і метаданих).",
         "zh-cn": "维护版本：升级到 0.1.8，并对齐 ioBroker 仓库要求（Node.js >=22、release-script >=5.2.0、包含 Node 20 的 CI 矩阵、README 与元数据清理）。"
-      },
-      "0.1.7": {
-        "en": "Add robust post-race refresh retry logic — 6 attempts every 10 minutes to ensure Jolpica round data stabilizes. Verified via cross-API analysis that points discrepancies stem from upstream mixed-round data delivery, not adapter mapping.",
-        "de": "Robuste Post-Race-Refresh-Retry-Logik hinzugefügt — 6 Versuche alle 10 Minuten, um sicherzustellen, dass Jolpica-Rundendaten stabil sind. Durch API-Analyse bestätigt: Punktemissstände kommen von Jolpica-Mix-Datenlieferung, nicht vom Adapter.",
-        "ru": "Добавлена надежная логика повторного обновления данных после гонки — 6 попыток каждые 10 минут для стабилизации данных Jolpica. Перекрестная API-проверка подтвердила: расхождения в очках исходят от смешанных данных Jolpica, а не от адаптера.",
-        "pt": "Adicionada lógica robusta de atualização pós-corrida — 6 tentativas a cada 10 minutos para garantir estabilidade dos dados Jolpica. Verificação cruzada de API confirmou: discrepâncias de pontos vêm de entrega de dados misto Jolpica, não do adaptador.",
-        "nl": "Robuuste post-race refresh retry-logica toegevoegd — 6 pogingen elke 10 minuten om Jolpica ronde-data stabiel te houden. Gekruiste API-analyse bevestigd: puntenverschillen komen van gemengde Jolpica-gegevens, niet van adapter.",
-        "fr": "Logique de réessai robuste de rafraîchissement post-course ajoutée — 6 tentatives toutes les 10 minutes pour garantir la stabilité des données Jolpica. Vérification croisée API confirmée : les écarts de points proviennent de la livraison de données mixtes Jolpica, pas de l'adaptateur.",
-        "it": "Aggiunta logica robusta di refresh post-gara — 6 tentativi ogni 10 minuti per garantire la stabilità dei dati Jolpica. Verifica API incrociata confermata: le discrepanze di punti provengono dalla fornitura di dati misti Jolpica, non dall'adattatore.",
-        "es": "Lógica robusta de actualización post-carrera añadida — 6 intentos cada 10 minutos para garantizar la estabilidad de los datos Jolpica. Verificación cruzada de API confirmada: las discrepancias de puntos provienen de la entrega de datos mixtos de Jolpica, no del adaptador.",
-        "pl": "Dodana solidna logika ponownego odświeżania po wyścig — 6 prób co 10 minut, aby zapewnić stabilność danych Jolpica. Potwierdzono wzajemną weryfikację API: rozbieżności w punktach pochodzą z dostarczenia mieszanych danych Jolpica, a nie adaptera.",
-        "uk": "Додана надійна логіка повторного оновлення даних після гонки — 6 спроб кожні 10 хвилин для забезпечення стабільності даних Jolpica. Взаємна перевірка API підтвердила: розбіжності в балах походять від змішаної доставки даних Jolpica, а не від адаптера.",
-        "zh-cn": "添加强大的赛后刷新重试逻辑——每 10 分钟 6 次尝试以确保 Jolpica 轮次数据稳定。交叉 API 验证确认：积分差异来自 Jolpica 混合数据交付，而不是适配器。"
-      },
-      "0.1.6": {
-        "en": "Removed fp1/fp2/fp3 and sprint_qualifying result states — Jolpica/Ergast API does not provide practice or sprint qualifying results",
-        "de": "Datenpunkte fp1/fp2/fp3 und sprint_qualifying entfernt — Jolpica/Ergast liefert keine Trainings- oder Sprint-Qualifying-Ergebnisse",
-        "ru": "Удалены состояния fp1/fp2/fp3 и sprint_qualifying — API Jolpica/Ergast не предоставляет результаты практик и спринт-квалификации",
-        "pt": "Removidos estados fp1/fp2/fp3 e sprint_qualifying — a API Jolpica/Ergast não fornece resultados de treinos ou sprint qualifying",
-        "nl": "Staten fp1/fp2/fp3 en sprint_qualifying verwijderd — Jolpica/Ergast API levert geen trainings- of sprint-kwalificatieresultaten",
-        "fr": "États fp1/fp2/fp3 et sprint_qualifying supprimés — l'API Jolpica/Ergast ne fournit pas les résultats des essais libres ni du sprint qualifying",
-        "it": "Rimossi gli stati fp1/fp2/fp3 e sprint_qualifying — l'API Jolpica/Ergast non fornisce risultati di prove libere o sprint qualifying",
-        "es": "Eliminados los estados fp1/fp2/fp3 y sprint_qualifying — la API Jolpica/Ergast no proporciona resultados de entrenamientos ni sprint qualifying",
-        "pl": "Usunięto stany fp1/fp2/fp3 i sprint_qualifying — API Jolpica/Ergast nie udostępnia wyników treningów ani sprint qualifying",
-        "uk": "Видалено стани fp1/fp2/fp3 і sprint_qualifying — API Jolpica/Ergast не надає результати тренувань та спринт-кваліфікації",
-        "zh-cn": "移除 fp1/fp2/fp3 和 sprint_qualifying 状态——Jolpica/Ergast API 不提供练习赛或冲刺排位赛成绩"
-      },
-      "0.1.4": {
-        "en": "Removed VIS1 widgets (development discontinued)",
-        "de": "VIS1-Widgets entfernt (Entwicklung eingestellt)",
-        "ru": "Удалены виджеты VIS1 (разработка прекращена)",
-        "pt": "Widgets VIS1 removidos (desenvolvimento descontinuado)",
-        "nl": "VIS1-widgets verwijderd (ontwikkeling stopgezet)",
-        "fr": "Widgets VIS1 supprimés (développement arrêté)",
-        "it": "Widget VIS1 rimossi (sviluppo interrotto)",
-        "es": "Widgets VIS1 eliminados (desarrollo descontinuado)",
-        "pl": "Usunięto widgety VIS1 (rozwój przerwany)",
-        "uk": "Видалено віджети VIS1 (розробку припинено)",
-        "zh-cn": "移除 VIS1 小部件（开发已停止）"
-      },
-      "0.1.3": {
-        "en": "Complete rewrite: SignalR WebSocket, Jolpica schedule API, new 4-channel data structure",
-        "de": "Komplettes Rewrite: SignalR WebSocket, Jolpica Schedule-API, neue 4-Kanal-Datenstruktur",
-        "ru": "Полный рерайт: SignalR WebSocket, Jolpica API расписания, новая 4-канальная структура данных",
-        "pt": "Reescrita completa: SignalR WebSocket, API de calendário Jolpica, nova estrutura de dados em 4 canais",
-        "nl": "Volledige herschrijving: SignalR WebSocket, Jolpica schema-API, nieuwe 4-kanaals datastructuur",
-        "fr": "Réécriture complète : SignalR WebSocket, API calendrier Jolpica, nouvelle structure de données à 4 canaux",
-        "it": "Riscrittura completa: SignalR WebSocket, API calendario Jolpica, nuova struttura dati a 4 canali",
-        "es": "Reescritura completa: SignalR WebSocket, API de calendario Jolpica, nueva estructura de datos de 4 canales",
-        "pl": "Pełna przebudowa: SignalR WebSocket, API kalendarza Jolpica, nowa 4-kanałowa struktura danych",
-        "uk": "Повне переписування: SignalR WebSocket, Jolpica API розкладу, нова 4-канальна структура даних",
-        "zh-cn": "完整重写：SignalR WebSocket、Jolpica 赛程 API、全新四通道数据结构"
       }
     },
     "titleLang": {
