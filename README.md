@@ -33,9 +33,9 @@ See the **Usage** section below for the complete object hierarchy and update int
 
 | Channel | Source | Update |
 |---|---|---|
-| `schedule/` | Jolpica API (Ergast fallback) | Hourly |
-| `standings/` | Jolpica API (Ergast fallback) | Hourly + after race |
-| `results/` | Jolpica API (Ergast fallback) | Hourly + after session |
+| `schedule/` | Jolpica API | Hourly |
+| `standings/` | Jolpica API | Hourly + after race |
+| `results/` | Jolpica API | Hourly + after session |
 | `live/` | F1 Live Timing SignalR WebSocket | Real-time push |
 
 ## Requirements
@@ -43,7 +43,7 @@ See the **Usage** section below for the complete object hierarchy and update int
 - ioBroker >= 5.0.19
 - Node.js >= 22
 - Internet connection
-- Stable connection to [Jolpica API](https://api.jolpi.ca/) or fallback [Ergast API](https://ergast.com/mwapi/)
+- Stable connection to [Jolpica API](https://api.jolpi.ca/)
 
 ## Installation & Configuration
 
@@ -61,8 +61,8 @@ The adapter uses multiple data sources with automatic fallback:
 
 | Channel | Primary | Fallback | Behavior |
 |---------|---------|----------|----------|
-| Schedule & Standings | [Jolpica API](https://api.jolpi.ca/) | [Ergast API](https://ergast.com/mwapi/) | Updated hourly + after races |
-| Results | Jolpica API | Ergast API | Updated after each session |
+| Schedule & Standings | [Jolpica API](https://api.jolpi.ca/) | Updated hourly + after races |
+| Results | Jolpica API | Updated after each session |
 | Live Data | [F1 Live Timing SignalR](https://www.formula1.com/) | OpenF1 API | Real-time push during sessions |
 
 **Note:** During race weekends, upstream APIs may temporarily deliver mixed-round data (e.g., standings updated before results). The adapter includes retry logic (6 attempts, 10-minute intervals) to ensure data consistency.
@@ -110,7 +110,6 @@ During the first 60 minutes after a race ends, standings and results may briefly
 1. Check that a session is currently active (F1 Live Timing typically streams during practice, qualifying, and race)
 2. Verify internet connection
 3. Check adapter logs (ioBroker Admin → Instances → F1 → Logs)
-4. If Jolpica API is unavailable, the adapter falls back to [Ergast API](https://ergast.com/mwapi/)
 
 ### Stale data
 
@@ -126,6 +125,7 @@ Data is cached and updated on a schedule. If data appears outdated:
 ### 0.1.12 (2026-08-09)
 
 - (bloop) Repository checker maintenance: updated dependency requirements and cleaned package metadata for current ioBroker compatibility expectations
+- (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
 
 ### 0.1.11 (2026-06-10)
 
@@ -141,6 +141,8 @@ Data is cached and updated on a schedule. If data appears outdated:
 - (bloop) Improved live connection stability with handshake-aware subscription flow
 
 For older changelog entries, see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+
+[Older changelogs can be found there](CHANGELOG_OLD.md)
 
 ## Data Sources & Attribution
 
