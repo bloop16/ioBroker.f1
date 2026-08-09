@@ -37,3 +37,5 @@ coverage/
 
 # Skill development
 .github/agents/*
+!.github/agents/
+!.github/agents/iobroker-adapter-dev.agent.md

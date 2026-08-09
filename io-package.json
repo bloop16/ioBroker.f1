@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "f1",
-		"version": "0.1.11",
+		"version": "0.1.12",
 		"news": {
+			"0.1.12": {
+				"en": "Repository checker maintenance release: updated dependency requirements and cleaned up metadata to keep the adapter aligned with current ioBroker package expectations.",
+				"de": "Repository-Checker-Wartungsrelease: Abhängigkeitsanforderungen aktualisiert und Metadaten bereinigt, damit der Adapter mit den aktuellen ioBroker-Paketanforderungen konsistent bleibt.",
+				"ru": "Технический релиз по проверке репозитория: обновлены требования к зависимостям и очищены метаданные для соответствия текущим требованиям пакета ioBroker.",
+				"pt": "Versão de manutenção do repositório: requisitos de dependência atualizados e metadados limpos para manter o adaptador alinhado com as expectativas atuais do pacote ioBroker.",
+				"nl": "Repository-checker onderhoudsrelease: afhankelijkheidsvereisten bijgewerkt en metadata opgeschoond om de adapter in lijn te houden met de huidige ioBroker-pakketverwachtingen.",
+				"fr": "Version de maintenance du checker de dépôt : exigences de dépendances mises à jour et métadonnées nettoyées pour garder l'adaptateur aligné sur les attentes actuelles du package ioBroker.",
+				"it": "Release di manutenzione del repository checker: aggiornati i requisiti delle dipendenze e puliti i metadati per mantenere l'adattatore allineato alle attuali aspettative del package ioBroker.",
+				"es": "Versión de mantenimiento del comprobador de repositorio: actualizados los requisitos de dependencias y limpiados los metadatos para mantener el adaptador alineado con las expectativas actuales del paquete ioBroker.",
+				"pl": "Wydanie utrzymaniowe checker-a repozytorium: zaktualizowano wymagania zależności i uporządkowano metadane, aby adapter pozostał zgodny z aktualnymi oczekiwaniami pakietu ioBroker.",
+				"uk": "Технічний реліз перевірки репозиторію: оновлено вимоги до залежностей і очищено метадані, щоб адаптер залишався узгодженим із поточними вимогами пакета ioBroker.",
+				"zh-cn": "仓库检查器维护发布：更新了依赖要求并清理了元数据，使适配器与当前 ioBroker 包期待规范保持一致。"
+			},
 			"0.1.11": {
 				"en": "Live data quality update: fixed truncated race control/team radio outputs, improved top-three ordering and tyre/driver cache merging, and aligned session-end handling for more consistent Monaco race data.",
 				"de": "Live-Daten-Qualitätsupdate: gekürzte Race-Control/Team-Radio-Ausgaben behoben, Top-3-Reihenfolge sowie Tyre-/Driver-Cache-Merging verbessert und Session-Ende-Handling für konsistentere Monaco-Renndaten vereinheitlicht.",
@@ -93,19 +106,6 @@
 				"pl": "Usunięto widgety VIS1 (rozwój przerwany)",
 				"uk": "Видалено віджети VIS1 (розробку припинено)",
 				"zh-cn": "移除 VIS1 小部件（开发已停止）"
-			},
-			"0.1.3": {
-				"en": "Complete rewrite: SignalR WebSocket, Jolpica schedule API, new 4-channel data structure",
-				"de": "Komplettes Rewrite: SignalR WebSocket, Jolpica Schedule-API, neue 4-Kanal-Datenstruktur",
-				"ru": "Полный рерайт: SignalR WebSocket, Jolpica API расписания, новая 4-канальная структура данных",
-				"pt": "Reescrita completa: SignalR WebSocket, API de calendário Jolpica, nova estrutura de dados em 4 canais",
-				"nl": "Volledige herschrijving: SignalR WebSocket, Jolpica schema-API, nieuwe 4-kanaals datastructuur",
-				"fr": "Réécriture complète : SignalR WebSocket, API calendrier Jolpica, nouvelle structure de données à 4 canaux",
-				"it": "Riscrittura completa: SignalR WebSocket, API calendario Jolpica, nuova struttura dati a 4 canali",
-				"es": "Reescritura completa: SignalR WebSocket, API de calendario Jolpica, nueva estructura de datos de 4 canales",
-				"pl": "Pełna przebudowa: SignalR WebSocket, API kalendarza Jolpica, nowa 4-kanałowa struktura danych",
-				"uk": "Повне переписування: SignalR WebSocket, Jolpica API розкладу, нова 4-канальна структура даних",
-				"zh-cn": "完整重写：SignalR WebSocket、Jolpica 赛程 API、全新四通道数据结构"
 			}
 		},
 		"titleLang": {
