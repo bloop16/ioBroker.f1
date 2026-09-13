@@ -4,6 +4,12 @@
     Older changelog entries are stored here.
     This file is supported by @alcalzone/releasescript.
 -->
+### 0.1.10 (2026-06-05)
+
+- (bloop) Fixed live sessions by migrating from legacy SignalR to SignalR Core transport
+- (bloop) Reduced repeated 401 reconnect warnings from F1 Live Timing legacy endpoint
+- (bloop) Improved live connection stability with handshake-aware subscription flow
+
 ### 0.1.9 (2026-06-02)
 
 - (bloop) Maintenance: bumped adapter version to `0.1.9`

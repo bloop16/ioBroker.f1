@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "f1",
-    "version": "0.1.12",
+    "version": "0.1.13",
     "news": {
+      "0.1.13": {
+        "en": "Release maintenance update: refreshed dependency versions and aligned the adapter metadata and release notes for the current ioBroker package baseline.",
+        "de": "Release-Wartungsupdate: Abhängigkeiten aktualisiert und Metadaten sowie Release-Notes für die aktuelle ioBroker-Paketbasis abgestimmt.",
+        "ru": "Техобновление релиза: обновлены версии зависимостей и выровнены метаданные адаптера и заметки о релизе с текущей базой пакета ioBroker.",
+        "pt": "Atualização de manutenção do release: versões de dependências atualizadas e metadados do adaptador/notes de release alinhados com a linha atual do pacote ioBroker.",
+        "nl": "Release-onderhoudsupdatе: afhankelijkheidsversies vernieuwd en de adaptermetadata plus release-opmerkingen afgestemd op de huidige ioBroker-pakketbasis.",
+        "fr": "Mise à jour de maintenance de la version : dépendances actualisées et métadonnées/adaptateur alignés avec la base actuelle du package ioBroker.",
+        "it": "Aggiornamento di manutenzione della release: versioni dipendenze aggiornate e metadata del modulo/allineamento note di rilascio per la baseline attuale del package ioBroker.",
+        "es": "Actualización de mantenimiento de la versión: dependencias actualizadas y metadatos del adaptador/notas de release alineados con la base actual del paquete ioBroker.",
+        "pl": "Aktualizacja utrzymaniowa wersji: odświeżono wersje zależności i wyrównano metadane adaptera oraz informacje o wydaniu do obecnej bazy pakietu ioBroker.",
+        "uk": "Технічне оновлення релізу: оновлено версії залежностей і узгоджено метадані адаптера та примітки релізу з поточною базою пакету ioBroker.",
+        "zh-cn": "版本维护更新：刷新了依赖版本，并将适配器元数据与发布说明同步到当前 ioBroker 包基线。"
+      },
       "0.1.12": {
         "en": "Repository checker maintenance release: updated dependency requirements and cleaned up metadata to keep the adapter aligned with current ioBroker package expectations.",
         "de": "Repository-Checker-Wartungsrelease: Abhängigkeitsanforderungen aktualisiert und Metadaten bereinigt, damit der Adapter mit den aktuellen ioBroker-Paketanforderungen konsistent bleibt.",
