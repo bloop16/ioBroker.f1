@@ -126,7 +126,7 @@ Data is cached and updated on a schedule. If data appears outdated:
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.1.14 (2026-11-20)
 
 - (bloop) Fix: process SignalR Core Subscribe snapshot (session name, session part, clock were missing) (#104)
 - (bloop) Fix: OpenF1 fallback no longer freezes time_elapsed at 00:30:00 and survives single failed checks (#104)
