@@ -80,6 +80,8 @@ const TRACK_STATUS_MAP = {
 };
 const LIVE_RACE_CONTROL_MAX = 200;
 const LIVE_TEAM_RADIO_MAX = 100;
+/** Consecutive negative OpenF1 checks before a fallback live session is ended. */
+const LIVE_FALLBACK_MAX_MISSES = 3;
 // ── Adapter class ─────────────────────────────────────────────────────────────
 class F1 extends utils.Adapter {
     JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1";
@@ -120,6 +122,7 @@ class F1 extends utils.Adapter {
     liveSessionType = "";
     liveSessionStartUTC = "";
     fallbackSuppressedUntilMs = 0;
+    fallbackMissCount = 0;
     postSessionRefreshAttempts = 0;
     postSessionTargetRound = null;
     // Set true in onUnload so fire-and-forget async loops can exit early
@@ -562,6 +565,15 @@ class F1 extends utils.Adapter {
             return false;
         }
     }
+    /** Clear per-session metadata learned from SignalR SessionInfo. */
+    resetLiveSessionMeta() {
+        this.liveSessionName = "";
+        this.liveSessionType = "";
+        this.liveSessionStartUTC = "";
+        this.liveMeetingRound = null;
+        this.liveMeetingName = "";
+        this.liveMeetingCountry = "";
+    }
     isTerminalSessionStatus(status) {
         const normalized = status.toLowerCase();
         return ["ends", "ended", "finished", "finalised", "finalized", "inactive", "completed"].includes(normalized);
@@ -573,6 +585,8 @@ class F1 extends utils.Adapter {
         }
         this.currentLiveSession = null;
         this.liveFallbackActive = false;
+        this.fallbackMissCount = 0;
+        this.resetLiveSessionMeta();
         // Prevent immediate OpenF1 fallback re-entry after session end.
         this.fallbackSuppressedUntilMs = Date.now() + 45 * 60 * 1000;
         await this.setStateAsync("live.is_live", { val: false, ack: true });
@@ -730,31 +744,52 @@ class F1 extends utils.Adapter {
             const allSessions = this.cachedSessions;
             const now = new Date();
             const prevSession = this.currentLiveSession;
+            const wasFallback = this.liveFallbackActive;
             this.currentLiveSession = this.detectLiveSession(allSessions, now);
             this.liveFallbackActive = false;
             // Fallback for short-notice schedule changes: force live mode if OpenF1
             // reports an active session although the calendar times are outdated.
-            if (!this.currentLiveSession &&
-                now.getTime() >= this.fallbackSuppressedUntilMs &&
-                (await this.detectLiveSessionViaOpenF1())) {
-                const fallbackRound = this.detectCurrentRound(races, now) ?? 0;
-                this.log.info("Live session detected via OpenF1 fallback (schedule may be outdated)");
-                this.liveFallbackActive = true;
-                this.currentLiveSession = {
-                    name: "Live Session",
-                    type: "Unknown",
-                    startUTC: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
-                    endUTC: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-                    round: fallbackRound,
-                    raceName: "",
-                    circuit: "",
-                    country: "",
-                };
+            if (!this.currentLiveSession && now.getTime() >= this.fallbackSuppressedUntilMs) {
+                const openF1Live = await this.detectLiveSessionViaOpenF1();
+                if (openF1Live) {
+                    this.fallbackMissCount = 0;
+                }
+                else if (wasFallback && prevSession) {
+                    this.fallbackMissCount += 1;
+                }
+                // Tolerate a few negative/failed OpenF1 checks in a row before ending a
+                // fallback session — a single timeout must not tear down live timing.
+                const keepFallback = openF1Live ||
+                    (wasFallback && prevSession !== null && this.fallbackMissCount < LIVE_FALLBACK_MAX_MISSES);
+                if (keepFallback) {
+                    this.liveFallbackActive = true;
+                    if (wasFallback && prevSession) {
+                        // Keep the same synthetic session object so its start time stays stable
+                        // (re-creating it every tick froze time_elapsed at 00:30:00).
+                        this.currentLiveSession = prevSession;
+                    }
+                    else {
+                        const fallbackRound = this.detectCurrentRound(races, now) ?? 0;
+                        this.log.info("Live session detected via OpenF1 fallback (schedule may be outdated)");
+                        this.currentLiveSession = {
+                            name: "Live Session",
+                            type: "Unknown",
+                            startUTC: now.toISOString(),
+                            endUTC: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                            round: fallbackRound,
+                            raceName: "",
+                            circuit: "",
+                            country: "",
+                        };
+                    }
+                }
+            }
+            if (!this.liveFallbackActive) {
+                this.fallbackMissCount = 0;
             }
             if (this.currentLiveSession) {
-                const sessionNameForState = this.liveFallbackActive && this.liveSessionName
-                    ? this.liveSessionName
-                    : this.currentLiveSession.name;
+                // Prefer the real name from SignalR SessionInfo over schedule/fallback names.
+                const sessionNameForState = this.liveSessionName || this.currentLiveSession.name;
                 await this.setStateAsync("live.is_live", { val: true, ack: true });
                 await this.setStateAsync("live.session_name", {
                     val: sessionNameForState,
@@ -785,6 +820,7 @@ class F1 extends utils.Adapter {
                     await this.setStateAsync("live.session_part", { val: 0, ack: true });
                     await this.setStateAsync("live.time_elapsed", { val: "00:00:00", ack: true });
                     this.stopClockExtrapolation();
+                    this.resetLiveSessionMeta();
                     if (this.ws) {
                         this.disconnectSignalR(true); // full reset: session ended, wipe driver metadata
                     }
@@ -977,7 +1013,28 @@ class F1 extends utils.Adapter {
                 }
                 continue;
             }
-            // Legacy/RPC-like replay shape (or translated core completion):
+            // SignalR Core completion of our Subscribe invocation:
+            // {"type":3,"invocationId":"1","result":{SessionInfo:{...},TimingData:{...},...}}
+            // The result carries the full initial snapshot of every subscribed stream.
+            // Without it, only deltas arrive and rarely-changing data (SessionInfo,
+            // SessionPart, ExtrapolatedClock) is never populated.
+            if (payload?.type === 3) {
+                if (payload?.error) {
+                    this.log.warn(`F1 Live Timing Subscribe failed: ${String(payload.error)}`);
+                }
+                else if (payload?.result && typeof payload.result === "object") {
+                    const streams = Object.keys(payload.result);
+                    this.log.debug(`[SignalR] initial snapshot received for ${streams.length} streams`);
+                    for (const [stream, data] of Object.entries(payload.result)) {
+                        await this.handleStreamData(stream, data);
+                    }
+                }
+                else {
+                    this.log.debug("[SignalR] Subscribe completed without snapshot data");
+                }
+                continue;
+            }
+            // Legacy/RPC-like replay shape:
             if (payload?.R && typeof payload.R === "object") {
                 for (const [stream, data] of Object.entries(payload.R)) {
                     await this.handleStreamData(stream, data);
@@ -1107,8 +1164,8 @@ class F1 extends utils.Adapter {
         }
         const startDateRaw = String(data?.StartDate ?? data?.GmtStart ?? "").trim();
         if (startDateRaw) {
-            const parsed = new Date(startDateRaw);
-            if (!isNaN(parsed.getTime())) {
+            const parsed = this.parseSessionInfoDate(startDateRaw, data?.GmtOffset);
+            if (parsed) {
                 this.liveSessionStartUTC = parsed.toISOString();
                 await this.updateTimeElapsedState(parsed.getTime());
             }
@@ -1125,6 +1182,23 @@ class F1 extends utils.Adapter {
             this.sessionPath = path;
             void this.fetchStaticDriverList(path);
         }
+    }
+    /**
+     * Parse SessionInfo.StartDate. F1 sends it as circuit-local time without zone
+     * (e.g. "2026-11-07T14:00:00") plus GmtOffset (e.g. "-03:00:00").
+     *
+     * @param raw - StartDate string
+     * @param gmtOffset - GmtOffset string like "-03:00:00"
+     */
+    parseSessionInfoDate(raw, gmtOffset) {
+        const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+        let iso = raw;
+        if (!hasZone) {
+            const m = /^([+-])?(\d{1,2}):(\d{2})/.exec(typeof gmtOffset === "string" ? gmtOffset.trim() : "");
+            iso = m ? `${raw}${m[1] === "-" ? "-" : "+"}${m[2].padStart(2, "0")}:${m[3]}` : `${raw}Z`;
+        }
+        const parsed = new Date(iso);
+        return isNaN(parsed.getTime()) ? null : parsed;
     }
     /**
      * Fetch the static DriverList JSON from the F1 live timing server.
