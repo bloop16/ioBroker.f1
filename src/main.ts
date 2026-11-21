@@ -720,9 +720,17 @@ class F1 extends utils.Adapter {
 		this.liveMeetingCountry = "";
 	}
 
+	/**
+	 * Only statuses that mark the end of the whole session are terminal.
+	 * "Finished" and "Inactive" also occur between qualifying parts (Q1 -> Q2 -> Q3)
+	 * and after the chequered flag before results are final, so they must not
+	 * tear down live timing.
+	 *
+	 * @param status - SessionStatus.Status from SignalR
+	 */
 	private isTerminalSessionStatus(status: string): boolean {
 		const normalized = status.toLowerCase();
-		return ["ends", "ended", "finished", "finalised", "finalized", "inactive", "completed"].includes(normalized);
+		return ["ends", "ended", "finalised", "finalized"].includes(normalized);
 	}
 
 	private async handleSessionEnded(reason: string, endedSessionOverride?: ScheduleSession | null): Promise<void> {

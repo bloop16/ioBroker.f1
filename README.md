@@ -126,6 +126,10 @@ Data is cached and updated on a schedule. If data appears outdated:
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+
+- (bloop) Fix: live timing no longer stops between qualifying parts – "Finished"/"Inactive" session status is not treated as session end anymore (#104)
+
 ### 0.1.14 (2026-11-20)
 
 - (bloop) Fix: process SignalR Core Subscribe snapshot (session name, session part, clock were missing) (#104)
