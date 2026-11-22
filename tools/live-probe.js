@@ -93,10 +93,21 @@ adapter.handleStreamData = async (s, d) => {
 			"live.time_elapsed",
 			"live.track_status",
 			"live.laps_current",
+			"live.laps_total",
 		];
 		for (const k of keys) {
 			console.log(`[probe] ${k} =`, states[k]);
 		}
+		try {
+			const drivers = JSON.parse(states["live.drivers"] || "[]");
+			console.log(`[probe] live.drivers: ${drivers.length} entries`);
+			for (const d of drivers.slice(0, 5)) {
+				console.log("[probe]   ", JSON.stringify(d).slice(0, 300));
+			}
+		} catch (e) {
+			console.log("[probe] live.drivers unparsable:", e.message);
+		}
+		console.log("[probe] live.top_three =", String(states["live.top_three"] || "").slice(0, 300));
 		ws.close();
 		process.exit(0);
 	}, seconds * 1000);
