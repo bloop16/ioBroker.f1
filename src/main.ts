@@ -191,6 +191,7 @@ class F1 extends utils.Adapter {
 	private liveSessionStartUTC = "";
 	private fallbackSuppressedUntilMs = 0;
 	private fallbackMissCount = 0;
+	private currentSessionPart = 0;
 	private postSessionRefreshAttempts = 0;
 	private postSessionTargetRound: number | null = null;
 
@@ -1165,6 +1166,7 @@ class F1 extends utils.Adapter {
 		if (fullReset) {
 			this.driverList = {};
 			this.sessionPath = "";
+			this.currentSessionPart = 0;
 		}
 	}
 
@@ -1348,6 +1350,7 @@ class F1 extends utils.Adapter {
 	private async onSessionPart(part: unknown): Promise<void> {
 		const num = parseInt(String(part), 10);
 		if (!isNaN(num) && num >= 0 && num <= 3) {
+			this.currentSessionPart = num;
 			await this.setStateAsync("live.session_part", { val: num, ack: true });
 		}
 	}
@@ -1770,8 +1773,9 @@ class F1 extends utils.Adapter {
 				team_name: info.TeamName ?? "",
 				team_colour: info.TeamColour ?? info.TeamColor ?? "",
 				position,
-				gap_to_leader: timing?.GapToLeader ?? null,
-				interval: timing?.IntervalToPositionAhead?.Value ?? null,
+				gap_to_leader: timing?.GapToLeader ?? this.getQualifyingStat(timing, "TimeDiffToFastest"),
+				interval:
+					timing?.IntervalToPositionAhead?.Value ?? this.getQualifyingStat(timing, "TimeDifftoPositionAhead"),
 				last_lap_time: timing?.LastLapTime?.Value ?? null,
 				tyre_compound: compound,
 				tyre_laps: tyreLaps,
@@ -2079,9 +2083,62 @@ class F1 extends utils.Adapter {
 	 * @param target - The target object to merge into
 	 * @param source - The source object to merge from
 	 */
+	/**
+	 * Qualifying TimingData has no GapToLeader/IntervalToPositionAhead; gaps are
+	 * provided per part in Stats[part-1] (note F1's spelling "TimeDifftoPositionAhead").
+	 *
+	 * @param timing - TimingData line of one driver
+	 * @param field - Stats field name
+	 */
+	private getQualifyingStat(timing: any, field: "TimeDiffToFastest" | "TimeDifftoPositionAhead"): string | null {
+		const stats = timing?.Stats;
+		if (!stats || typeof stats !== "object") {
+			return null;
+		}
+		const list: any[] = Array.isArray(stats) ? stats : Object.values(stats);
+		const pick = (entry: any): string | null => {
+			const v =
+				entry?.[field] ?? (field === "TimeDifftoPositionAhead" ? entry?.TimeDiffToPositionAhead : undefined);
+			return typeof v === "string" && v !== "" ? v : null;
+		};
+		if (this.currentSessionPart > 0) {
+			const current = pick(list[this.currentSessionPart - 1]);
+			if (current !== null) {
+				return current;
+			}
+		}
+		return null;
+	}
+
 	private deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
 		const result = { ...target };
 		for (const [key, val] of Object.entries(source)) {
+			// SignalR deltas update arrays as index-keyed objects, e.g. Stats: {"1": {...}}.
+			// Merge them into a copy of the existing array instead of replacing it.
+			if (
+				Array.isArray(result[key]) &&
+				val !== null &&
+				typeof val === "object" &&
+				!Array.isArray(val) &&
+				Object.keys(val).every(k => /^\d+$/.test(k))
+			) {
+				const arr = [...(result[key] as unknown[])];
+				for (const [idx, item] of Object.entries(val as Record<string, unknown>)) {
+					const i = Number(idx);
+					const prev = arr[i];
+					arr[i] =
+						item !== null &&
+						typeof item === "object" &&
+						!Array.isArray(item) &&
+						prev !== null &&
+						typeof prev === "object" &&
+						!Array.isArray(prev)
+							? this.deepMerge(prev as Record<string, any>, item as Record<string, any>)
+							: item;
+				}
+				result[key] = arr;
+				continue;
+			}
 			if (
 				val !== null &&
 				typeof val === "object" &&

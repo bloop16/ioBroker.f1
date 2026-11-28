@@ -128,6 +128,8 @@ Data is cached and updated on a schedule. If data appears outdated:
 -->
 ### **WORK IN PROGRESS**
 
+- (bloop) Fix: qualifying gaps/intervals in live.drivers are now taken from TimingData Stats (GapToLeader is not sent in qualifying)
+- (bloop) Fix: SignalR array deltas (Stats, BestLapTimes, Sectors) are merged instead of replacing the whole array
 - (bloop) Fix: live timing no longer stops between qualifying parts – "Finished"/"Inactive" session status is not treated as session end anymore (#104)
 
 ### 0.1.14 (2026-11-20)
